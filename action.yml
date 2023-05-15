@@ -1,0 +1,33 @@
+name: Typescript Action template
+description: Easy Typescript Actions
+inputs:
+  function:
+    description: sample input
+    default: function1
+
+outputs:
+  result:
+    description: sample output
+    value: ${{ steps.function.outputs.result }}
+
+runs:
+  using: "composite"
+  steps:
+    - id: path
+      shell: bash
+      run: |
+        cd ${{ github.action_path }}
+        echo "action_path=$(pwd)" >> "$GITHUB_OUTPUT"
+
+    - name: Setup TypeScript scripts
+      id: github-script-ts
+      uses: urcomputeringpal/github-script-ts@v0
+      with:
+        path: ${{ steps.path.outputs.action_path }}
+
+    - name: ${{ inputs.function }}
+      id: function
+      uses: urcomputeringpal/github-script-ts@v0
+      with:
+        path: ${{ steps.path.outputs.action_path }}
+        function: ${{ inputs.function }}
