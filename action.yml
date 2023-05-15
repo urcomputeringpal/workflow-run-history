@@ -1,14 +1,6 @@
-name: Typescript Action template
-description: Easy Typescript Actions
-inputs:
-  function:
-    description: sample input
-    default: function1
+name: Summarize Workflow History
+description: Performance, success rate, etc
 
-outputs:
-  result:
-    description: sample output
-    value: ${{ steps.function.outputs.result }}
 
 runs:
   using: "composite"
@@ -25,9 +17,9 @@ runs:
       with:
         path: ${{ steps.path.outputs.action_path }}
 
-    - name: ${{ inputs.function }}
+    - name: summarizeHistory
       id: function
       uses: urcomputeringpal/github-script-ts@v0
       with:
         path: ${{ steps.path.outputs.action_path }}
-        function: ${{ inputs.function }}
+        function: summarizeHistory
