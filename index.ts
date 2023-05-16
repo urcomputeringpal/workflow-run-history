@@ -110,8 +110,8 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
             });
             workflow_id = run.data.workflow_id;
         } catch (error) {
-            await new Promise(resolve => setTimeout(resolve, 5000));
-            core.notice(`${error}`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            console.log("retrying...");
         }
     }
 
@@ -164,6 +164,7 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
                 ],
                 ...table,
             ]);
+            core.summary.write();
         })
         .catch(error => {
             core.error(`${error}`);
