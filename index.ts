@@ -100,12 +100,23 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
         throw new Error("");
     }
 
-    const run = await github.rest.actions.getWorkflowRun({
-        ...context.repo,
-        run_id: context.runId,
-        per_page: 100,
-    });
-    const workflow_id = run.data.workflow_id;
+    let workflow_id: number = 0;
+
+    while (workflow_id === 0) {
+        try {
+            const workflow = await github.rest.actions.getWorkflow({
+                ...context.repo,
+                workflow_id: workflow_id,
+            });
+            if (workflow.data.name === context.workflow) {
+                workflow_id = workflow.data.id;
+            }
+        } catch (error) {
+            // wait 1s
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            core.notice(`${error}`);
+        }
+    }
 
     getWorkflowRuns(workflow_id, { github })
         .then(groupedWorkflowRuns => {
