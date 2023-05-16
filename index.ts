@@ -7,6 +7,13 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
         throw new Error("");
     }
 
+    // TODO include info about this run
+    const run = await github.rest.actions.getWorkflowRun({
+        ...context.repo,
+        run_id: context.runId,
+    });
+    const workflow_id = run.data.workflow_id;
+
     // FIXME selectable 'created' param to ensure we're using the same time period
     // FIXME paginate
     // FIXME also lookup default branch stats for the each of the same
@@ -14,7 +21,7 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
     try {
         successful = await github.rest.actions.listWorkflowRuns({
             ...context.repo,
-            workflow_id: context.workflow,
+            workflow_id,
             status: "success",
             exclude_pull_requests: true,
         });
@@ -40,7 +47,7 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
         try {
             failure = await github.rest.actions.listWorkflowRuns({
                 ...context.repo,
-                workflow_id: context.workflow,
+                workflow_id,
                 status: "failure",
                 exclude_pull_requests: true,
             });
