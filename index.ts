@@ -140,17 +140,18 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
         );
         core.summary.addHeading(`Workflow Run History over the last month (${totalRuns} total runs)`);
 
-        const success = groupedWorkflowRuns.get("success")!;
-        const failure = groupedWorkflowRuns.get("failure")!;
+        const success = groupedWorkflowRuns.get("success");
+        const failure = groupedWorkflowRuns.get("failure");
 
-        core.summary
-            .addHeading(
+        if (success !== undefined && failure !== undefined && success.runs.length + failure.runs.length > 0) {
+            core.summary.addHeading(
                 `Success rate: ${Math.round(
                     (success.runs.length / (success.runs.length + failure.runs.length)) * 100
                 )}% (${success.runs.length} successes out of ${success.runs.length + failure.runs.length} runs)`
-            )
-            .addHeading(`${success.runs.length} successful runs`)
-            .addTable([
+            );
+        }
+        if (success !== undefined && success.runs.length > 0) {
+            core.summary.addHeading(`${success.runs.length} successful runs`).addTable([
                 [
                     { data: "Percentile", header: true },
                     { data: "Success duration in seconds", header: true },
@@ -158,9 +159,10 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
                 ["99th", `${success.getNthPercentileDuration(99)}`],
                 ["90th", `${success.getNthPercentileDuration(90)}`],
                 ["50th", `${success.getNthPercentileDuration(50)}`],
-            ])
-            .addHeading(`${failure.runs.length} failing runs`)
-            .addTable([
+            ]);
+        }
+        if (failure !== undefined && failure.runs.length > 0) {
+            core.summary.addHeading(`${failure.runs.length} failing runs`).addTable([
                 [
                     { data: "Percentile", header: true },
                     { data: "Success duration in seconds", header: true },
@@ -169,17 +171,19 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
                 ["90th", `${failure.getNthPercentileDuration(90)}`],
                 ["50th", `${failure.getNthPercentileDuration(50)}`],
             ]);
-
-        const table = Array.from(groupedWorkflowRuns.keys()).map(status => {
-            return [status, `${Math.ceil((groupedWorkflowRuns.get(status)!.runs.length / totalRuns) * 100)}%`];
-        });
-        core.summary.addHeading("Run status breakdown").addTable([
-            [
-                { data: "Status", header: true },
-                { data: "Percent of total", header: true },
-            ],
-            ...table,
-        ]);
+        }
+        if (totalRuns > 0) {
+            const table = Array.from(groupedWorkflowRuns.keys()).map(status => {
+                return [status, `${Math.ceil((groupedWorkflowRuns.get(status)!.runs.length / totalRuns) * 100)}%`];
+            });
+            core.summary.addHeading("Run status breakdown").addTable([
+                [
+                    { data: "Status", header: true },
+                    { data: "Percent of total", header: true },
+                ],
+                ...table,
+            ]);
+        }
         core.summary.write();
     });
 
