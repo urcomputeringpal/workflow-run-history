@@ -11,23 +11,23 @@ interface WorkflowRun {
 
 class WorkflowGroup {
     runs: WorkflowRun[];
+    durations: number[];
+    sortedDurations: number[];
 
     constructor(runs: WorkflowRun[]) {
         this.runs = runs;
+        this.durations = this.runs.map(run => run.durationSeconds);
+        this.sortedDurations = this.durations.sort((a, b) => b - a);
     }
 
     getNthPercentileDuration(percentile: number): number {
-        const durations = this.runs.map(run => run.durationSeconds);
-        const sortedDurations = durations.sort((a, b) => a - b);
-        const index = Math.floor((percentile / 100) * sortedDurations.length);
-        return sortedDurations[index];
+        const index = Math.floor((percentile / 100) * this.sortedDurations.length);
+        return this.sortedDurations[index];
     }
 
     getPercentileForDuration(durationSeconds: number): number {
-        const durations = this.runs.map(run => run.durationSeconds);
-        const sortedDurations = durations.sort((a, b) => a - b);
-        const index = sortedDurations.findIndex(value => value >= durationSeconds);
-        const percentile = (index / sortedDurations.length) * 100;
+        const index = this.sortedDurations.findIndex(value => value >= durationSeconds);
+        const percentile = (index / this.sortedDurations.length) * 100;
         return Math.ceil(percentile);
     }
 }
@@ -41,14 +41,22 @@ async function getWorkflowRuns(workflow_id: number, args: GitHubScriptArguments)
         throw new Error("need github, context, and core");
     }
 
+    const now = new Date();
+    // FIXME allow users to specify date range
+    const startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split("T")[0];
+    const endDate = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split("T")[0];
+
+    // Create the `created` parameter for the API request
+    const created = `${startDate}..${endDate}`;
+
     try {
-        // FIXME selectable 'created' param to ensure we're using the same time period
         // FIXME also lookup default branch stats, make appropriate comparisons
         for await (const { data: responseWorkflowRuns } of github.paginate.iterator(
             github.rest.actions.listWorkflowRuns,
             {
                 ...context.repo,
                 workflow_id,
+                created,
             }
         )) {
             for (const responseWorkflowRun of responseWorkflowRuns) {
@@ -162,7 +170,7 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
             ]);
 
         const table = Array.from(groupedWorkflowRuns.keys()).map(status => {
-            return [status, `${(groupedWorkflowRuns.get(status)!.runs.length / totalRuns) * 100} % of total`];
+            return [status, `${(groupedWorkflowRuns.get(status)!.runs.length / totalRuns) * 100}%`];
         });
         core.summary.addHeading("Run status breakdown").addTable([
             [
