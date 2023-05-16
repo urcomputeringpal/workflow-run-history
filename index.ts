@@ -46,28 +46,29 @@ async function getWorkflowRuns(workflow_id: number, args: GitHubScriptArguments)
     try {
         // FIXME selectable 'created' param to ensure we're using the same time period
         // FIXME also lookup default branch stats, make appropriate comparisons
-        for await (const response of github.paginate.iterator(github.rest.actions.listWorkflowRuns, {
-            ...context.repo,
-            workflow_id,
-        })) {
-            while (response.data.length > 0) {
-                for (const responseWorkflowRun of response.data.workflow_runs) {
-                    const createdAt = new Date(responseWorkflowRun.created_at);
-                    const updatedAt = new Date(responseWorkflowRun.updated_at);
-                    const durationSeconds = Math.floor((updatedAt.getTime() - createdAt.getTime()) / 1000);
+        for await (const { data: responseWorkflowRuns } of github.paginate.iterator(
+            github.rest.actions.listWorkflowRuns,
+            {
+                ...context.repo,
+                workflow_id,
+            }
+        )) {
+            for (const responseWorkflowRun of responseWorkflowRuns) {
+                const createdAt = new Date(responseWorkflowRun.created_at);
+                const updatedAt = new Date(responseWorkflowRun.updated_at);
+                const durationSeconds = Math.floor((updatedAt.getTime() - createdAt.getTime()) / 1000);
 
-                    const workflowRun: WorkflowRun = {
-                        id: responseWorkflowRun.id,
-                        status: responseWorkflowRun.status as string,
-                        created_at: responseWorkflowRun.created_at,
-                        updated_at: responseWorkflowRun.updated_at,
-                        durationSeconds: durationSeconds,
-                    };
-                    if (responseWorkflowRun.conclusion !== null) {
-                        workflowRun.status = responseWorkflowRun.conclusion;
-                    }
-                    workflowRuns.push(workflowRun);
+                const workflowRun: WorkflowRun = {
+                    id: responseWorkflowRun.id,
+                    status: responseWorkflowRun.status as string,
+                    created_at: responseWorkflowRun.created_at,
+                    updated_at: responseWorkflowRun.updated_at,
+                    durationSeconds: durationSeconds,
+                };
+                if (responseWorkflowRun.conclusion !== null) {
+                    workflowRun.status = responseWorkflowRun.conclusion;
                 }
+                workflowRuns.push(workflowRun);
             }
         }
     } catch (error) {
