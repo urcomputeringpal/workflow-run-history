@@ -26,7 +26,7 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
             exclude_pull_requests: true,
         });
 
-        core.summary.addHeading("Workflow Run History").addHeading("Not including this run", 6).write();
+        core.summary.addHeading("Workflow Run History").write();
 
         const successfulDurations = successful.data.workflow_runs.map(run => {
             const created = new Date(run.created_at);
@@ -35,7 +35,7 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
             return Math.floor(diff / 1000);
         });
 
-        const successfulDurationsSorted = successfulDurations.sort((a, b) => a - b);
+        const successfulDurationsSorted = successfulDurations.sort((a, b) => b - a);
         const successfulDurations99thPercentile =
             successfulDurationsSorted[Math.floor(successfulDurationsSorted.length * 0.99)];
         const successfulDurations90thPercentile =
@@ -52,11 +52,33 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
                 exclude_pull_requests: true,
             });
 
+            core.summary.addHeading("This run", 2).write();
+
+            const created = new Date(run.data.created_at);
+            const updated = new Date();
+            const diff = updated.getTime() - created.getTime();
+            const runDuration = Math.floor(diff / 1000);
+
+            // compute the percentile of this duration as compared to successfulDurationsSorted
+            const runDurationPercentile =
+                (successfulDurationsSorted.length -
+                    successfulDurationsSorted.filter(duration => duration < runDuration).length) /
+                successfulDurationsSorted.length;
+
+            core.summary
+                .addList([
+                    `Run duration: ${runDuration} seconds`,
+                    `${Math.round(runDurationPercentile * 100)}th percentile`,
+                ])
+                .write();
+
             core.summary
                 .addHeading(
                     `Success rate: ${Math.round(
                         (successful.data.total_count / (successful.data.total_count + failure.data.total_count)) * 100
-                    )}%`
+                    )}% (${successful.data.total_count} successes out of ${
+                        successful.data.total_count + failure.data.total_count
+                    } runs)))`
                 )
                 .addTable([
                     [
@@ -76,7 +98,7 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
                 return Math.floor(diff / 1000);
             });
 
-            const failureDurationsSorted = failureDurations.sort((a, b) => a - b);
+            const failureDurationsSorted = failureDurations.sort((a, b) => b - a);
             const failureDurations99thPercentile =
                 failureDurationsSorted[Math.floor(failureDurationsSorted.length * 0.99)];
             const failureDurations90thPercentile =
@@ -88,7 +110,9 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
                 .addHeading(
                     `Failure rate: ${Math.round(
                         (failure.data.total_count / (successful.data.total_count + failure.data.total_count)) * 100
-                    )}%`
+                    )}% (${failure.data.total_count} failures out of ${
+                        successful.data.total_count + failure.data.total_count
+                    } runs))`
                 )
                 .addTable([
                     [
