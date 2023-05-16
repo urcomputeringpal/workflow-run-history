@@ -137,7 +137,7 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
             (total, group) => total + group.runs.length,
             0
         );
-        core.summary.addHeading(`Workflow Run History (${totalRuns} total runs)`);
+        core.summary.addHeading(`Workflow Run History over the last month (${totalRuns} total runs)`);
 
         const success = groupedWorkflowRuns.get("success")!;
         const failure = groupedWorkflowRuns.get("failure")!;
