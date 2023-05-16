@@ -12,7 +12,8 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - run: sleep 5
-    performance:
+    workflow-run-history:
+        name: workflow run history
         needs: prepare
         runs-on: ubuntu-latest
         steps:
@@ -22,7 +23,7 @@ jobs:
               id: summarizeHistory
               timeout-minutes: 2
     test:
-        needs: prepare
+        needs: workflow-run-history
         runs-on: ubuntu-latest
         steps:
             - run: echo true
