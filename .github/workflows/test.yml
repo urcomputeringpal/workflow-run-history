@@ -1,17 +1,29 @@
 name: test
 on:
-  pull_request:
+    pull_request:
+    push:
+        branches:
+            - main
+    schedule:
+        - cron: "0 * * * *"
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab
-      - uses: ./
-        id: function1
-        with:
-          function: function1
-      - shell: bash
-        run: |
-          [ "${{ steps.function1.outputs.result }}" == "string" ]
+    prepare:
+        runs-on: ubuntu-latest
+        steps:
+            - run: sleep 5
+    workflow-run-history:
+        name: workflow run history
+        needs: prepare
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab
+            - uses: ./
+              id: summarizeHistory
+              timeout-minutes: 2
+    test:
+        needs: workflow-run-history
+        runs-on: ubuntu-latest
+        steps:
+            - run: echo true
