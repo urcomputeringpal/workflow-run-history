@@ -11,25 +11,23 @@ interface WorkflowRun {
 
 class WorkflowGroup {
     runs: WorkflowRun[];
-    durations: number[];
-    sortedDurations: number[];
 
     constructor(runs: WorkflowRun[]) {
         this.runs = runs;
-        const durations = runs.map(run => run.durationSeconds);
-        this.durations = durations;
-        const sortedDurations = durations.sort((a, b) => b - a);
-        this.sortedDurations = sortedDurations;
     }
 
     getNthPercentileDuration = (percentile: number): number => {
-        const index = Math.floor((percentile / 100) * this.sortedDurations.length);
-        return this.sortedDurations[index];
+        const durations = this.runs.map(run => run.durationSeconds);
+        const sortedDurations = durations.sort((a, b) => b - a);
+        const index = Math.floor((percentile / 100) * sortedDurations.length);
+        return sortedDurations[index];
     };
 
     getPercentileForDuration = (durationSeconds: number): number => {
-        const index = this.sortedDurations.findIndex(value => value >= durationSeconds);
-        const percentile = (index / this.sortedDurations.length) * 100;
+        const durations = this.runs.map(run => run.durationSeconds);
+        const sortedDurations = durations.sort((a, b) => b - a);
+        const index = sortedDurations.findIndex(value => value >= durationSeconds);
+        const percentile = (index / sortedDurations.length) * 100;
         return Math.ceil(percentile);
     };
 }
