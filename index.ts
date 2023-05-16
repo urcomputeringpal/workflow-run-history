@@ -16,8 +16,10 @@ class WorkflowGroup {
 
     constructor(runs: WorkflowRun[]) {
         this.runs = runs;
-        this.durations = this.runs.map(run => run.durationSeconds);
-        this.sortedDurations = this.durations.sort((a, b) => b - a);
+        const durations = runs.map(run => run.durationSeconds);
+        this.durations = durations;
+        const sortedDurations = durations.sort((a, b) => b - a);
+        this.sortedDurations = sortedDurations;
     }
 
     getNthPercentileDuration(percentile: number): number {
@@ -171,7 +173,7 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
             ]);
 
         const table = Array.from(groupedWorkflowRuns.keys()).map(status => {
-            return [status, `${(groupedWorkflowRuns.get(status)!.runs.length / totalRuns) * 100}%`];
+            return [status, `${Math.ceil((groupedWorkflowRuns.get(status)!.runs.length / totalRuns) * 100)}%`];
         });
         core.summary.addHeading("Run status breakdown").addTable([
             [
