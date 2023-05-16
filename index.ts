@@ -117,6 +117,7 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
 
     getWorkflowRuns(workflow_id, { github, context, core })
         .then(groupedWorkflowRuns => {
+            console.log(groupedWorkflowRuns.keys());
             const totalRuns = Array.from(groupedWorkflowRuns.values()).reduce(
                 (total, group) => total + group.runs.length,
                 0
