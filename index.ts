@@ -22,16 +22,16 @@ class WorkflowGroup {
         this.sortedDurations = sortedDurations;
     }
 
-    getNthPercentileDuration(percentile: number): number {
+    getNthPercentileDuration = (percentile: number): number => {
         const index = Math.floor((percentile / 100) * this.sortedDurations.length);
         return this.sortedDurations[index];
-    }
+    };
 
-    getPercentileForDuration(durationSeconds: number): number {
+    getPercentileForDuration = (durationSeconds: number): number => {
         const index = this.sortedDurations.findIndex(value => value >= durationSeconds);
         const percentile = (index / this.sortedDurations.length) * 100;
         return Math.ceil(percentile);
-    }
+    };
 }
 
 type GroupedWorkflowRuns = Map<string, WorkflowGroup>;
