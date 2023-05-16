@@ -104,16 +104,13 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
 
     while (workflow_id === 0) {
         try {
-            const workflow = await github.rest.actions.getWorkflow({
+            const run = await github.rest.actions.getWorkflowRun({
                 ...context.repo,
-                workflow_id: workflow_id,
+                run_id: context.runId,
             });
-            if (workflow.data.name === context.workflow) {
-                workflow_id = workflow.data.id;
-            }
+            workflow_id = run.data.workflow_id;
         } catch (error) {
-            // wait 1s
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await new Promise(resolve => setTimeout(resolve, 5000));
             core.notice(`${error}`);
         }
     }
