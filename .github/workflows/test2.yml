@@ -11,6 +11,11 @@ jobs:
     test:
         runs-on: ubuntu-latest
         steps:
+            - run: sleep 5
+    performance:
+        needs: test
+        runs-on: ubuntu-latest
+        steps:
             - name: Checkout
               uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab
             - uses: ./
