@@ -8,12 +8,12 @@ on:
         - cron: "0 * * * *"
 
 jobs:
-    test:
+    prepare:
         runs-on: ubuntu-latest
         steps:
             - run: sleep 5
     performance:
-        needs: test
+        needs: prepare
         runs-on: ubuntu-latest
         steps:
             - name: Checkout
@@ -21,3 +21,8 @@ jobs:
             - uses: ./
               id: summarizeHistory
               timeout-minutes: 2
+    test:
+        needs: prepare
+        runs-on: ubuntu-latest
+        steps:
+            - run: echo true
