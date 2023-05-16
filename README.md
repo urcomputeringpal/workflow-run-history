@@ -40,8 +40,6 @@ jobs:
         needs: test
         runs-on: ubuntu-latest
         steps:
-            - name: Checkout
-              uses: actions/checkout@v3
             - uses: urcomputeringpal/workflow-run-history@v0
               timeout-minutes: 2
 ```
