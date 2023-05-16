@@ -40,7 +40,7 @@ async function getWorkflowRuns(workflow_id: number, args: GitHubScriptArguments)
     const workflowRuns: WorkflowRun[] = [];
     const { github, context, core } = args;
     if (github === undefined || context == undefined || core === undefined) {
-        throw new Error("");
+        throw new Error("need github, context, and core");
     }
 
     try {
@@ -115,7 +115,7 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
         }
     }
 
-    getWorkflowRuns(workflow_id, { github })
+    getWorkflowRuns(workflow_id, { github, context, core })
         .then(groupedWorkflowRuns => {
             const totalRuns = Array.from(groupedWorkflowRuns.values()).reduce(
                 (total, group) => total + group.runs.length,
@@ -167,7 +167,7 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
             core.summary.write();
         })
         .catch(error => {
-            core.error(`${error}`);
+            core.error(`Error listing workflows: ${error}`);
         });
 
     return;
