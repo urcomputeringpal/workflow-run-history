@@ -1,6 +1,4 @@
 import { GitHubScriptArguments } from "@urcomputeringpal/github-script-ts";
-import { RestEndpointMethodTypes } from "@octokit/plugin-rest-endpoint-methods";
-import { group } from "console";
 
 interface WorkflowRun {
     id: number;
