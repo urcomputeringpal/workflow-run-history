@@ -1,6 +1,11 @@
 # workflow-run-history
 
-Adds a Markdown Step Summary explaining the historical performance and success of a workflow.
+Adds a Markdown Step Summary explaining the historical performance and success rate of a workflow over the previous month.
+
+### Not yet implemented
+
+-   Compare performance / success rate against default branch
+-   Custom date rages
 
 ## Example
 
@@ -13,3 +18,30 @@ Adds a Markdown Step Summary explaining the historical performance and success o
 <h1>Run status breakdown</h1>
 <table><tr><th>Status</th><th>Percent of total</th></tr><tr><td>success</td><td>75%</td></tr><tr><td>failure</td><td>25%</td></tr></table>
 }
+
+## Usage
+
+```yaml
+name: test
+on:
+    pull_request:
+    push:
+        branches:
+            - main
+    schedule:
+        - cron: "0 * * * *"
+
+jobs:
+    test:
+        runs-on: ubuntu-latest
+        steps:
+            - run: sleep 5
+    performance:
+        needs: test
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v3
+            - uses: urcomputeringpal/workflow-run-history@v0
+              timeout-minutes: 2
+```
