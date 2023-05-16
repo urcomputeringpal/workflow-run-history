@@ -11,6 +11,8 @@ runs:
               cd ${{ github.action_path }}
               echo "action_path=$(pwd)" >> "$GITHUB_OUTPUT"
               find .
+        - run: |
+              set -x
               test -f ${{ steps.path.outputs.action_path }}/package-lock.json
 
         - name: Setup TypeScript scripts
