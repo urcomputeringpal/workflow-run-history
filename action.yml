@@ -9,6 +9,7 @@ runs:
           run: |
               cd ${{ github.action_path }}
               echo "action_path=$(pwd)" >> "$GITHUB_OUTPUT"
+              find .
 
         - name: Setup TypeScript scripts
           id: github-script-ts
