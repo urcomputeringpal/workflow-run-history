@@ -7,9 +7,11 @@ runs:
         - id: path
           shell: bash
           run: |
+              set -x
               cd ${{ github.action_path }}
               echo "action_path=$(pwd)" >> "$GITHUB_OUTPUT"
               find .
+              test -f ${{ steps.path.outputs.action_path }}/package-lock.json
 
         - name: Setup TypeScript scripts
           id: github-script-ts
