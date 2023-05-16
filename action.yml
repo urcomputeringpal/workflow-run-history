@@ -22,4 +22,3 @@ runs:
           with:
               path: ${{ steps.path.outputs.action_path }}
               function: summarizeHistory
-              debug: true
