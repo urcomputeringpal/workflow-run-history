@@ -43,8 +43,9 @@ async function getWorkflowRuns(workflow_id: number, args: GitHubScriptArguments)
 
     const now = new Date();
     // FIXME allow users to specify date range
-    const startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split("T")[0];
-    const endDate = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split("T")[0];
+    // get the date 1 month ago today
+    const startDate = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate()).toISOString().split("T")[0];
+    const endDate = new Date().toISOString().split("T")[0];
 
     // Create the `created` parameter for the API request
     const created = `${startDate}..${endDate}`;
