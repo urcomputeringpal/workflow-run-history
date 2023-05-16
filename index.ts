@@ -71,7 +71,7 @@ async function getWorkflowRuns(workflow_id: number, args: GitHubScriptArguments)
             }
         }
     } catch (error) {
-        core.error(`${error}`);
+        core.error(`Error loading workflow runs: ${error}`);
     }
 
     const groupedRuns = new Map<string, WorkflowGroup>();
@@ -115,61 +115,57 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
         }
     }
 
-    getWorkflowRuns(workflow_id, { github, context, core })
-        .then(groupedWorkflowRuns => {
-            console.log(groupedWorkflowRuns.keys());
-            const totalRuns = Array.from(groupedWorkflowRuns.values()).reduce(
-                (total, group) => total + group.runs.length,
-                0
-            );
-            core.summary.addHeading(`Workflow Run History (${totalRuns} total runs)`);
+    getWorkflowRuns(workflow_id, { github, context, core }).then(groupedWorkflowRuns => {
+        console.log(groupedWorkflowRuns.keys());
+        const totalRuns = Array.from(groupedWorkflowRuns.values()).reduce(
+            (total, group) => total + group.runs.length,
+            0
+        );
+        core.summary.addHeading(`Workflow Run History (${totalRuns} total runs)`);
 
-            const success = groupedWorkflowRuns.get("success")!;
-            const failure = groupedWorkflowRuns.get("failure")!;
+        const success = groupedWorkflowRuns.get("success")!;
+        const failure = groupedWorkflowRuns.get("failure")!;
 
-            core.summary
-                .addHeading(
-                    `Success rate: ${Math.round(
-                        (success.runs.length / (success.runs.length + failure.runs.length)) * 100
-                    )}% (${success.runs.length} successes out of ${success.runs.length + failure.runs.length} runs)`
-                )
-                .addHeading(`${success.runs.length} successful runs`)
-                .addTable([
-                    [
-                        { data: "Percentile", header: true },
-                        { data: "Success duration in seconds", header: true },
-                    ],
-                    ["99th", `${success.getNthPercentileDuration(99)}`],
-                    ["90th", `${success.getNthPercentileDuration(90)}`],
-                    ["50th", `${success.getNthPercentileDuration(50)}`],
-                ])
-                .addSeparator()
-                .addHeading(`${failure.runs.length} failing runs`)
-                .addTable([
-                    [
-                        { data: "Percentile", header: true },
-                        { data: "Success duration in seconds", header: true },
-                    ],
-                    ["99th", `${failure.getNthPercentileDuration(99)}`],
-                    ["90th", `${failure.getNthPercentileDuration(90)}`],
-                    ["50th", `${failure.getNthPercentileDuration(50)}`],
-                ]);
-
-            const table = Array.from(groupedWorkflowRuns.keys()).map(status => {
-                return [status, `${groupedWorkflowRuns.get(status)!.runs.length / totalRuns}% of total`];
-            });
-            core.summary.addTable([
+        core.summary
+            .addHeading(
+                `Success rate: ${Math.round(
+                    (success.runs.length / (success.runs.length + failure.runs.length)) * 100
+                )}% (${success.runs.length} successes out of ${success.runs.length + failure.runs.length} runs)`
+            )
+            .addHeading(`${success.runs.length} successful runs`)
+            .addTable([
                 [
-                    { data: "Status", header: true },
-                    { data: "Percent of total", header: true },
+                    { data: "Percentile", header: true },
+                    { data: "Success duration in seconds", header: true },
                 ],
-                ...table,
+                ["99th", `${success.getNthPercentileDuration(99)}`],
+                ["90th", `${success.getNthPercentileDuration(90)}`],
+                ["50th", `${success.getNthPercentileDuration(50)}`],
+            ])
+            .addSeparator()
+            .addHeading(`${failure.runs.length} failing runs`)
+            .addTable([
+                [
+                    { data: "Percentile", header: true },
+                    { data: "Success duration in seconds", header: true },
+                ],
+                ["99th", `${failure.getNthPercentileDuration(99)}`],
+                ["90th", `${failure.getNthPercentileDuration(90)}`],
+                ["50th", `${failure.getNthPercentileDuration(50)}`],
             ]);
-            core.summary.write();
-        })
-        .catch(error => {
-            core.error(`Error listing workflows: ${error}`);
+
+        const table = Array.from(groupedWorkflowRuns.keys()).map(status => {
+            return [status, `${groupedWorkflowRuns.get(status)!.runs.length / totalRuns}% of total`];
         });
+        core.summary.addTable([
+            [
+                { data: "Status", header: true },
+                { data: "Percent of total", header: true },
+            ],
+            ...table,
+        ]);
+        core.summary.write();
+    });
 
     return;
 }
