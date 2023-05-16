@@ -52,13 +52,22 @@ async function getWorkflowRuns(workflow_id: number, args: GitHubScriptArguments)
             }
         )) {
             for (const responseWorkflowRun of responseWorkflowRuns) {
+                if (responseWorkflowRun.conclusion === undefined) {
+                    continue;
+                }
+                const status = responseWorkflowRun.status as string;
+
+                // ignore a few statuses that also don't count as "finished"
+                if (["in_progress", "queued", "requested", "waiting", "pending"].includes(status)) {
+                    continue;
+                }
                 const createdAt = new Date(responseWorkflowRun.created_at);
                 const updatedAt = new Date(responseWorkflowRun.updated_at);
                 const durationSeconds = Math.floor((updatedAt.getTime() - createdAt.getTime()) / 1000);
 
                 const workflowRun: WorkflowRun = {
                     id: responseWorkflowRun.id,
-                    status: responseWorkflowRun.status as string,
+                    status: status,
                     created_at: responseWorkflowRun.created_at,
                     updated_at: responseWorkflowRun.updated_at,
                     durationSeconds: durationSeconds,
@@ -141,7 +150,6 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
                 ["90th", `${success.getNthPercentileDuration(90)}`],
                 ["50th", `${success.getNthPercentileDuration(50)}`],
             ])
-            .addSeparator()
             .addHeading(`${failure.runs.length} failing runs`)
             .addTable([
                 [
@@ -154,9 +162,9 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
             ]);
 
         const table = Array.from(groupedWorkflowRuns.keys()).map(status => {
-            return [status, `${groupedWorkflowRuns.get(status)!.runs.length / totalRuns}% of total`];
+            return [status, `${(groupedWorkflowRuns.get(status)!.runs.length / totalRuns) * 100} % of total`];
         });
-        core.summary.addTable([
+        core.summary.addHeading("Run status breakdown").addTable([
             [
                 { data: "Status", header: true },
                 { data: "Percent of total", header: true },
