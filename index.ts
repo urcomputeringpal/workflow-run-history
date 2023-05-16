@@ -15,7 +15,7 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
         successful = await github.rest.actions.listWorkflowRuns({
             ...context.repo,
             workflow_id: context.workflow,
-            conclusion: "success",
+            status: "success",
             exclude_pull_requests: true,
         });
 
@@ -41,7 +41,7 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
             failure = await github.rest.actions.listWorkflowRuns({
                 ...context.repo,
                 workflow_id: context.workflow,
-                conclusion: "failure",
+                status: "failure",
                 exclude_pull_requests: true,
             });
 
