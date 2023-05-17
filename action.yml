@@ -21,5 +21,8 @@ runs:
           id: function
           uses: urcomputeringpal/github-script-ts@ffbd14d3da998a8c02d11cb421fe374104026b59 # v0.0.9
           with:
+              retries: 3
+              # missing 404 to allow for our own workflow run to take a few seconds to show up
+              retry-exempt-status-codes: 400,401,403,422
               path: ${{ steps.path.outputs.action_path }}
               function: summarizeHistory
