@@ -149,8 +149,8 @@ async function fetchWorkflowYaml(workflow_id: string, args: GitHubScriptArgument
 
             if (workflowContentResponse.status === 200) {
                 // Decode and parse the YAML content
-                const yamlContent = await (await fetch(workflowContentResponse.data.download_url)).text();
-                const parsedYaml = yaml.load(yamlContent);
+                const yamlContent = await github.request(workflowContentResponse.data.download_url);
+                const parsedYaml = yaml.load(yamlContent.data);
 
                 // Return the parsed YAML as a dictionary
                 return parsedYaml as WorkflowYaml;
