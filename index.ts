@@ -148,16 +148,13 @@ async function fetchWorkflowYaml(workflow_id: string, args: GitHubScriptArgument
             const yamlContent = await github.rest.repos.getContent({
                 ...context.repo,
                 path: workflowResponse.data.path,
-                headers: {
-                    accept: "application/vnd.github.v3.raw",
-                },
             });
             if (!Array.isArray(yamlContent.data) && yamlContent.data?.type === "file") {
                 const parsedYaml = yaml.load(yamlContent.data.content);
                 return parsedYaml as WorkflowYaml;
             } else {
                 console.error(
-                    `Error: failed to fetch workflow YAML for workflow ${workflow_id}: ${yamlContent.status}`
+                    `Error: failed to fetch workflow YAML for workflow ${workflow_id}: ${yamlContent.status} ${yamlContent.data}`
                 );
             }
         }
