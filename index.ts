@@ -148,6 +148,9 @@ async function fetchWorkflowYaml(workflow_id: string, args: GitHubScriptArgument
             const yamlContent = await github.rest.repos.getContent({
                 ...context.repo,
                 path: workflowResponse.data.path,
+                mediaType: {
+                    format: "raw",
+                },
             });
             if (!Array.isArray(yamlContent.data) && yamlContent.data?.type === "file") {
                 const parsedYaml = yaml.load(yamlContent.data.content);
@@ -180,7 +183,7 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
     workflow_id = run.data.workflow_id;
 
     const workflowYaml = await fetchWorkflowYaml(workflow_id.toString(), { github, context });
-
+    console.log(`workflowYaml: ${workflowYaml}`);
     if (workflowYaml !== undefined && workflowYaml["name"] !== undefined) {
         core.summary.addHeading(`History of ${workflowYaml["name"]} over the last month`);
     } else {
