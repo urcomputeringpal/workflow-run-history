@@ -131,7 +131,7 @@ interface WorkflowYaml {
     };
 }
 
-async function fetchWorkflowYaml(workflow_id: string, args: GitHubScriptArguments): Promise<WorkflowYaml | null> {
+async function fetchWorkflowYaml(workflow_id: string, args: GitHubScriptArguments): Promise<WorkflowYaml | undefined> {
     const { github, context } = args;
     if (github === undefined || context == undefined) {
         throw new Error("Error: need github and context");
@@ -150,17 +150,27 @@ async function fetchWorkflowYaml(workflow_id: string, args: GitHubScriptArgument
             if (workflowContentResponse.status === 200) {
                 // Decode and parse the YAML content
                 const yamlContent = await github.request(workflowContentResponse.data.download_url);
-                const parsedYaml = yaml.load(yamlContent.data);
+                if (yamlContent.status === 200) {
+                    const parsedYaml = yaml.load(yamlContent.data);
 
-                // Return the parsed YAML as a dictionary
-                return parsedYaml as WorkflowYaml;
+                    // Return the parsed YAML as a dictionary
+                    return parsedYaml as WorkflowYaml;
+                } else {
+                    console.error(
+                        `Error: failed to fetch workflow YAML for workflow ${workflow_id}: ${yamlContent.status}`
+                    );
+                }
+            } else {
+                console.error(
+                    `Error: failed to fetch workflow YAML for workflow ${workflow_id}: ${workflowContentResponse.status}`
+                );
             }
         }
     } catch (error) {
         console.error("Error:", error);
     }
 
-    return null;
+    return undefined;
 }
 
 export async function summarizeHistory(args: GitHubScriptArguments): Promise<void> {
@@ -179,12 +189,13 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
 
     const workflowYaml = await fetchWorkflowYaml(workflow_id.toString(), { github, context });
 
-    if (workflowYaml !== null && workflowYaml["name"] !== undefined) {
+    if (workflowYaml !== undefined && workflowYaml["name"] !== undefined) {
         core.summary.addHeading(`History of ${workflowYaml["name"]} over the last month`);
+    } else {
+        core.summary.addHeading(`History of workflow ${workflow_id} over the last month`);
     }
 
     getWorkflowRuns(workflow_id, { github, context, core }).then(groupedWorkflowRuns => {
-        console.log(groupedWorkflowRuns.keys());
         const totalRuns = Array.from(groupedWorkflowRuns.values()).reduce(
             (total, group) => total + group.runs.length,
             0
