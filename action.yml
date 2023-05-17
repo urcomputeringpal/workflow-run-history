@@ -12,14 +12,14 @@ runs:
 
         - name: Setup TypeScript scripts
           id: github-script-ts
-          uses: urcomputeringpal/github-script-ts@v0.0.9
+          uses: urcomputeringpal/github-script-ts@ffbd14d3da998a8c02d11cb421fe374104026b59 # v0.0.9
 
           with:
               path: ${{ steps.path.outputs.action_path }}
 
         - name: summarizeHistory
           id: function
-          uses: urcomputeringpal/github-script-ts@v0.0.9
+          uses: urcomputeringpal/github-script-ts@ffbd14d3da998a8c02d11cb421fe374104026b59 # v0.0.9
           with:
               path: ${{ steps.path.outputs.action_path }}
               function: summarizeHistory
