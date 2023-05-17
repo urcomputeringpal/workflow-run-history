@@ -152,14 +152,8 @@ async function fetchWorkflowYaml(workflow_id: string, args: GitHubScriptArgument
                     format: "raw",
                 },
             });
-            if (!Array.isArray(yamlContent.data) && yamlContent.data?.type === "file") {
-                const parsedYaml = yaml.load(yamlContent.data.content);
-                return parsedYaml as WorkflowYaml;
-            } else {
-                console.error(
-                    `Error: failed to fetch workflow YAML for workflow ${workflow_id}: ${yamlContent.status} ${yamlContent.data}`
-                );
-            }
+            const parsedYaml = yaml.load(`${yamlContent.data}`);
+            return parsedYaml as WorkflowYaml;
         }
     } catch (error) {
         console.error("Error:", error);
