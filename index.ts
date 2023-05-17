@@ -131,6 +131,18 @@ interface WorkflowYaml {
     };
 }
 
+enum ConfigOption {
+    target = "workflow_target_seconds",
+}
+
+// fetch a ConfigOption value from the `env` section of the workflow YAML
+function configOption(configOption: ConfigOption, workflowYaml: WorkflowYaml): string | undefined {
+    if (workflowYaml.env !== undefined && workflowYaml.env[configOption] !== undefined) {
+        return workflowYaml.env[configOption];
+    }
+    return undefined;
+}
+
 async function fetchWorkflowYaml(workflow_id: string, args: GitHubScriptArguments): Promise<WorkflowYaml | undefined> {
     const { github, context } = args;
     if (github === undefined || context == undefined) {
@@ -152,8 +164,12 @@ async function fetchWorkflowYaml(workflow_id: string, args: GitHubScriptArgument
                     format: "raw",
                 },
             });
-            const parsedYaml = yaml.load(`${yamlContent.data}`);
-            return parsedYaml as WorkflowYaml;
+            if (typeof yamlContent.data === "string") {
+                const parsedYaml = yaml.load(yamlContent.data);
+                return parsedYaml as WorkflowYaml;
+            } else {
+                console.error(`Error: yamlContent.data is not a string: ${yamlContent.data}`);
+            }
         }
     } catch (error) {
         console.error("Error:", error);
@@ -168,20 +184,27 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
         throw new Error("");
     }
 
-    let workflow_id: number = 0;
+    core.summary.addHeading("History over the last month");
+
+    let targetSeconds: number | undefined = undefined;
 
     const run = await github.rest.actions.getWorkflowRun({
         ...context.repo,
         run_id: context.runId,
     });
-    workflow_id = run.data.workflow_id;
-
+    const workflow_id = run.data.workflow_id;
     const workflowYaml = await fetchWorkflowYaml(workflow_id.toString(), { github, context });
-    console.log(`workflowYaml: ${workflowYaml}`);
-    if (workflowYaml !== undefined && workflowYaml["name"] !== undefined) {
-        core.summary.addHeading(`History of ${workflowYaml["name"]} over the last month`);
-    } else {
-        core.summary.addHeading(`History of workflow ${workflow_id} over the last month`);
+    if (workflowYaml !== undefined) {
+        const target = configOption(ConfigOption.target, workflowYaml);
+
+        if (target !== undefined) {
+            core.summary.addHeading(`Target runtime ${target}s`, 2);
+            targetSeconds = parseInt(target);
+        } else {
+            core.summary.addQuote(
+                `:warning: No target runtime specified in workflow YAML. Add \`${ConfigOption.target}: <seconds>\` to the \`env\` section to add a target.`
+            );
+        }
     }
 
     getWorkflowRuns(workflow_id, { github, context, core }).then(groupedWorkflowRuns => {
