@@ -201,6 +201,7 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
             core.summary.addHeading(`Target runtime ${target}s`, 2);
             targetSeconds = parseInt(target);
         } else {
+            console.log(`Warning: no target runtime specified in workflow YAML: ${workflowYaml.env}`);
             core.summary.addQuote(
                 `:warning: No target runtime specified in workflow YAML. Add \`${ConfigOption.target}: <seconds>\` to the \`env\` section to add a target.`
             );
