@@ -1,4 +1,5 @@
 import { GitHubScriptArguments } from "@urcomputeringpal/github-script-ts";
+import yaml from "js-yaml";
 
 interface WorkflowRun {
     id: number;
@@ -111,6 +112,57 @@ async function getWorkflowRuns(workflow_id: number, args: GitHubScriptArguments)
     return groupedRuns;
 }
 
+interface WorkflowYaml {
+    name: string;
+    env?: {
+        [envName: string]: string;
+    };
+    on: {
+        [eventName: string]: {
+            [eventProperty: string]: string;
+        };
+    };
+    jobs: {
+        [jobName: string]: {
+            name: string;
+            runs_on: string;
+            steps: string[];
+        };
+    };
+}
+
+async function fetchWorkflowYaml(workflow_id: string, args: GitHubScriptArguments): Promise<WorkflowYaml | null> {
+    const { github, context } = args;
+    if (github === undefined || context == undefined) {
+        throw new Error("Error: need github and context");
+    }
+    try {
+        // Get the workflow information
+        const workflowResponse = await github.rest.actions.getWorkflow({
+            ...context.repo,
+            workflow_id,
+        });
+
+        if (workflowResponse.data.path) {
+            // Get the raw workflow YAML content
+            const workflowContentResponse = await github.request(workflowResponse.data.url);
+
+            if (workflowContentResponse.status === 200) {
+                // Decode and parse the YAML content
+                const yamlContent = await (await fetch(workflowContentResponse.data.download_url)).text();
+                const parsedYaml = yaml.load(yamlContent);
+
+                // Return the parsed YAML as a dictionary
+                return parsedYaml as WorkflowYaml;
+            }
+        }
+    } catch (error) {
+        console.error("Error:", error);
+    }
+
+    return null;
+}
+
 export async function summarizeHistory(args: GitHubScriptArguments): Promise<void> {
     const { github, context, core } = args;
     if (github === undefined || context == undefined || core === undefined) {
@@ -119,17 +171,16 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
 
     let workflow_id: number = 0;
 
-    while (workflow_id === 0) {
-        try {
-            const run = await github.rest.actions.getWorkflowRun({
-                ...context.repo,
-                run_id: context.runId,
-            });
-            workflow_id = run.data.workflow_id;
-        } catch (error) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            console.log("retrying...");
-        }
+    const run = await github.rest.actions.getWorkflowRun({
+        ...context.repo,
+        run_id: context.runId,
+    });
+    workflow_id = run.data.workflow_id;
+
+    const workflowYaml = await fetchWorkflowYaml(workflow_id.toString(), { github, context });
+
+    if (workflowYaml !== null && workflowYaml["name"] !== undefined) {
+        core.summary.addHeading(`History of ${workflowYaml["name"]} over the last month`);
     }
 
     getWorkflowRuns(workflow_id, { github, context, core }).then(groupedWorkflowRuns => {
@@ -138,7 +189,7 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
             (total, group) => total + group.runs.length,
             0
         );
-        core.summary.addHeading(`Workflow Run History over the last month (${totalRuns} total runs)`);
+        core.summary.addHeading(`${totalRuns} total runs`, 2);
 
         const success = groupedWorkflowRuns.get("success");
         const failure = groupedWorkflowRuns.get("failure");

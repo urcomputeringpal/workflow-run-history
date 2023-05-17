@@ -12,9 +12,11 @@
     ],
     "main": "dist/index.js",
     "dependencies": {
-        "@urcomputeringpal/github-script-ts": "0.0.7"
+        "@urcomputeringpal/github-script-ts": "0.0.7",
+        "js-yaml": "4.1.0"
     },
     "devDependencies": {
+        "@types/js-yaml": "4.0.5",
         "@types/node": "16.18.31",
         "prettier": "2.8.8",
         "ts-loader": "9.4.2",
