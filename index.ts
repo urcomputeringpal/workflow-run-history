@@ -7,9 +7,8 @@ interface WorkflowRun {
     created_at: string;
     updated_at: string;
     durationSeconds: number;
-    // Add other properties as needed
+    ref: string;
 }
-
 class WorkflowGroup {
     runs: WorkflowRun[];
 
@@ -31,6 +30,14 @@ class WorkflowGroup {
         const percentile = (index / sortedDurations.length) * 100;
         return Math.ceil(percentile);
     };
+
+    byRef = (ref: string): WorkflowGroup => {
+        return new WorkflowGroup(this.runs.filter(run => run.status === ref));
+    };
+
+    ignoringRefsMatchingPrefixes = (refs: string[]): WorkflowGroup => {
+        return new WorkflowGroup(this.runs.filter(run => !refs.some(ref => run.ref.startsWith(ref))));
+    };
 }
 
 type GroupedWorkflowRuns = Map<string, WorkflowGroup>;
@@ -44,8 +51,8 @@ async function getWorkflowRuns(workflow_id: number, args: GitHubScriptArguments)
 
     const now = new Date();
     // FIXME allow users to specify date range
-    // get the date 1 month ago today
-    const startDate = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate()).toISOString().split("T")[0];
+    // get the date 1 week
+    const startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const endDate = new Date().toISOString().split("T")[0];
 
     // Create the `created` parameter for the API request
@@ -81,6 +88,7 @@ async function getWorkflowRuns(workflow_id: number, args: GitHubScriptArguments)
                     created_at: responseWorkflowRun.created_at,
                     updated_at: responseWorkflowRun.updated_at,
                     durationSeconds: durationSeconds,
+                    ref: responseWorkflowRun.head_branch || responseWorkflowRun.head_sha,
                 };
                 if (responseWorkflowRun.conclusion !== null) {
                     workflowRun.status = responseWorkflowRun.conclusion;
@@ -185,7 +193,7 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
         throw new Error("");
     }
 
-    core.summary.addHeading("History over the last month");
+    core.summary.addHeading("History over the last week");
 
     let targetSeconds: number | undefined = undefined;
 
@@ -219,12 +227,36 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
         const success = groupedWorkflowRuns.get("success");
         const failure = groupedWorkflowRuns.get("failure");
 
+        // time in seconds since run
+        const updatedAt = new Date(run.data.created_at);
+        const now = new Date();
+        const thisRunSeconds = Math.floor((now.getTime() - updatedAt.getTime()) / 1000);
+
         if (success !== undefined && failure !== undefined && success.runs.length + failure.runs.length > 0) {
             core.summary.addHeading(
                 `Success rate: ${Math.round(
                     (success.runs.length / (success.runs.length + failure.runs.length)) * 100
                 )}% (${success.runs.length} successes out of ${success.runs.length + failure.runs.length} runs)`
             );
+
+            const successPR = success
+                .ignoringRefsMatchingPrefixes([`refs/heads/${process.env.DEFAULT_BRANCH ?? "main"}`, "refs/tag"])
+                .getPercentileForDuration(thisRunSeconds);
+            const failurePR = failure
+                .ignoringRefsMatchingPrefixes([`refs/heads/${process.env.DEFAULT_BRANCH ?? "main"}`, "refs/tag"])
+                .getPercentileForDuration(thisRunSeconds);
+            const successDefault = success
+                .byRef(process.env.DEFAULT_BRANCH ?? "main")
+                .getPercentileForDuration(thisRunSeconds);
+            const failureDefault = failure
+                .byRef(process.env.DEFAULT_BRANCH ?? "main")
+                .getPercentileForDuration(thisRunSeconds);
+            core.summary.addList([
+                `Faster than ${successPR}% of successful runs for this workflow on PRs.`,
+                `Faster than ${failurePR}% of failing runs for this workflow on PRs.`,
+                `Faster than ${successDefault}% of successful runs for this workflow on the default branch.`,
+                `Faster than ${failureDefault}% of failing runs for this workflow on the default branch.`,
+            ]);
         }
         if (success !== undefined && success.runs.length > 0) {
             core.summary.addHeading(`${success.runs.length} successful runs`).addTable([

@@ -8,7 +8,7 @@ on:
         - cron: "0 * * * *"
 
 env:
-    workflow_target_seconds: 25
+    workflow_target_seconds: 60
 
 jobs:
     prepare:
