@@ -26,3 +26,4 @@ runs:
               retry-exempt-status-codes: 400,401,403,422
               path: ${{ steps.path.outputs.action_path }}
               function: summarizeHistory
+              debug: true

@@ -163,13 +163,15 @@ async function fetchWorkflowYaml(workflow_id: string, args: GitHubScriptArgument
                 mediaType: {
                     format: "raw",
                 },
+                ref: context.ref,
             });
-            if (typeof yamlContent.data === "string") {
-                const parsedYaml = yaml.load(yamlContent.data);
-                return parsedYaml as WorkflowYaml;
-            } else {
-                console.error(`Error: yamlContent.data is not a string: ${yamlContent.data}`);
-            }
+            console.log(`yamlContent.data: ${typeof yamlContent.data}`);
+            console.log(`yamlContent.data: ${yamlContent.data}`);
+            // if (typeof yamlContent.data === "string") {
+            //     const parsedYaml = yaml.load(yamlContent.data);
+            //     return parsedYaml as WorkflowYaml;
+            // } else {
+            //     console.error(`Error: yamlContent.data is not a string: ${yamlContent.data}`);
         }
     } catch (error) {
         console.error("Error:", error);
@@ -201,9 +203,9 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
             core.summary.addHeading(`Target runtime ${target}s`, 2);
             targetSeconds = parseInt(target);
         } else {
-            console.log(`Warning: no target runtime specified in workflow YAML: ${workflowYaml.env}`);
-            core.summary.addQuote(
-                `:warning: No target runtime specified in workflow YAML. Add \`${ConfigOption.target}: <seconds>\` to the \`env\` section to add a target.`
+            console.log(`Warning: no target runtime specified in workflow YAML: ${workflowYaml}`);
+            core.summary.addRaw(
+                `> :warning: No target runtime specified in workflow YAML. Add \`${ConfigOption.target}: <seconds>\` to the \`env\` section to add a target.`
             );
         }
     }
