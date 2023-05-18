@@ -115,7 +115,7 @@ async function getWorkflowRuns(workflow_id: number, args: GitHubScriptArguments)
 interface WorkflowYaml {
     name: string;
     env?: {
-        [envName: string]: string;
+        [envName: string]: string | number;
     };
     on: {
         [eventName: string]: {
@@ -138,7 +138,7 @@ enum ConfigOption {
 // fetch a ConfigOption value from the `env` section of the workflow YAML
 function configOption(configOption: ConfigOption, workflowYaml: WorkflowYaml): string | undefined {
     if (workflowYaml.env !== undefined && workflowYaml.env[configOption] !== undefined) {
-        return workflowYaml.env[configOption];
+        return `${workflowYaml.env[configOption]}`;
     }
     return undefined;
 }
@@ -165,13 +165,12 @@ async function fetchWorkflowYaml(workflow_id: string, args: GitHubScriptArgument
                 },
                 ref: context.ref,
             });
-            console.log(`yamlContent.data: ${typeof yamlContent.data}`);
-            console.log(`yamlContent.data: ${yamlContent.data}`);
-            // if (typeof yamlContent.data === "string") {
-            //     const parsedYaml = yaml.load(yamlContent.data);
-            //     return parsedYaml as WorkflowYaml;
-            // } else {
-            //     console.error(`Error: yamlContent.data is not a string: ${yamlContent.data}`);
+            if (typeof yamlContent.data === "string") {
+                const parsedYaml = yaml.load(yamlContent.data);
+                return parsedYaml as WorkflowYaml;
+            } else {
+                console.error(`Error: yamlContent.data is not a string: ${yamlContent.data}`);
+            }
         }
     } catch (error) {
         console.error("Error:", error);
