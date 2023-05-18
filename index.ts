@@ -52,7 +52,7 @@ async function getWorkflowRuns(workflow_id: number, args: GitHubScriptArguments)
     const now = new Date();
     // FIXME allow users to specify date range
     // get the date 1 week
-    const startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
     const endDate = new Date().toISOString().split("T")[0];
 
     // Create the `created` parameter for the API request
