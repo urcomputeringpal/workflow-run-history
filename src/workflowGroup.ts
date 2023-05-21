@@ -70,11 +70,7 @@ export async function getWorkflowRuns(workflow_id: number, args: GitHubScriptArg
         const workflowRunResponse: ListWorkflowRunsResponse =
             response.data.length === undefined ? (response.data as any).workflow_runs : response.data;
         if (workflowRunResponse !== undefined) {
-            console.log(`got ${workflowRunResponse.length} workflow runs`);
             for (const responseWorkflowRun of workflowRunResponse) {
-                console.log(
-                    `workflow run ${responseWorkflowRun.id} ${responseWorkflowRun.head_branch} ${responseWorkflowRun.head_sha}`
-                );
                 if (responseWorkflowRun.conclusion === undefined) {
                     continue;
                 }

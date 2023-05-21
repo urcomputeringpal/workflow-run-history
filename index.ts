@@ -82,6 +82,7 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
                 ["99th", `${success.getNthPercentileDuration(99)}`],
                 ["90th", `${success.getNthPercentileDuration(90)}`],
                 ["50th", `${success.getNthPercentileDuration(50)}`],
+                ["10th", `${success.getNthPercentileDuration(10)}`],
             ]);
         }
         if (failure !== undefined && failure.runs.length > 0) {
@@ -93,6 +94,7 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
                 ["99th", `${failure.getNthPercentileDuration(99)}`],
                 ["90th", `${failure.getNthPercentileDuration(90)}`],
                 ["50th", `${failure.getNthPercentileDuration(50)}`],
+                ["10th", `${failure.getNthPercentileDuration(10)}`],
             ]);
         }
         if (totalRuns > 0) {

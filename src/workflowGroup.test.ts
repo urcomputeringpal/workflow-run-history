@@ -134,45 +134,45 @@ describe("WorkflowGroup", () => {
     });
 });
 
+const mockWorkflowRunResponse = {
+    total_count: 4,
+    workflow_runs: [
+        {
+            id: 1,
+            conclusion: "success",
+            status: "completed",
+            head_branch: "branch-1",
+            created_at: "2022-01-01T00:00:00Z",
+            updated_at: "2022-01-01T00:10:00Z",
+        },
+        {
+            id: 2,
+            conclusion: "failure",
+            status: "completed",
+            head_branch: "branch-2",
+            created_at: "2022-01-01T00:00:00Z",
+            updated_at: "2022-01-01T00:20:00Z",
+        },
+        {
+            id: 3,
+            conclusion: "success",
+            status: "completed",
+            head_branch: "branch-1",
+            created_at: "2022-01-01T00:00:00Z",
+            updated_at: "2022-01-01T00:30:00Z",
+        },
+        {
+            id: 4,
+            conclusion: "failure",
+            status: "completed",
+            head_sha: "c0cda0d",
+            created_at: "2022-01-01T00:00:00Z",
+            updated_at: "2022-01-01T00:40:00Z",
+        },
+    ],
+};
+
 describe("getWorkflowRuns", () => {
-    const originalEnv = process.env;
-    const mockResponse = {
-        total_count: 4,
-        workflow_runs: [
-            {
-                id: 1,
-                conclusion: "success",
-                status: "completed",
-                head_branch: "branch-1",
-                created_at: "2022-01-01T00:00:00Z",
-                updated_at: "2022-01-01T00:10:00Z",
-            },
-            {
-                id: 2,
-                conclusion: "failure",
-                status: "completed",
-                head_branch: "branch-2",
-                created_at: "2022-01-01T00:00:00Z",
-                updated_at: "2022-01-01T00:20:00Z",
-            },
-            {
-                id: 3,
-                conclusion: "success",
-                status: "completed",
-                head_branch: "branch-1",
-                created_at: "2022-01-01T00:00:00Z",
-                updated_at: "2022-01-01T00:30:00Z",
-            },
-            {
-                id: 4,
-                conclusion: "failure",
-                status: "completed",
-                head_sha: "c0cda0d",
-                created_at: "2022-01-01T00:00:00Z",
-                updated_at: "2022-01-01T00:40:00Z",
-            },
-        ],
-    };
     beforeEach(() => {
         jest.resetModules();
         jest.doMock("@octokit/rest", () => {
@@ -181,25 +181,20 @@ describe("getWorkflowRuns", () => {
                     iterator: jest.fn(() => {
                         return {
                             async *[Symbol.asyncIterator]() {
-                                yield { data: mockResponse };
+                                yield { data: mockWorkflowRunResponse };
                             },
                         };
                     }),
                 };
                 rest = {
-                    actions: jest.fn().mockResolvedValue(mockResponse),
+                    actions: jest.fn().mockResolvedValue(mockWorkflowRunResponse),
                 };
             };
 
             return { Octokit };
         });
-
-        process.env = {
-            ...originalEnv,
-        };
     });
     afterEach(() => {
-        process.env = originalEnv;
         jest.resetAllMocks();
     });
 
@@ -236,5 +231,46 @@ describe("getWorkflowRuns", () => {
         expect(successGroup!.runs[1].ref).toBe("branch-1");
         expect(failureGroup!.runs[0].ref).toBe("branch-2");
         expect(failureGroup!.runs[1].ref).toBe("c0cda0d");
+    });
+
+    it("should fetch and group workflow runs correctly even when the paginated response is weird", async () => {
+        jest.resetModules();
+        jest.doMock("@octokit/rest", () => {
+            const Octokit = class PaginatedMocktokit {
+                paginate = {
+                    iterator: jest.fn(() => {
+                        return {
+                            async *[Symbol.asyncIterator]() {
+                                yield { data: mockWorkflowRunResponse.workflow_runs };
+                            },
+                        };
+                    }),
+                };
+                rest = {
+                    actions: jest.fn().mockResolvedValue(mockWorkflowRunResponse),
+                };
+            };
+
+            return { Octokit };
+        });
+
+        const PaginatedMocktokit = require("@octokit/rest").Octokit;
+        const mockGithub = new PaginatedMocktokit();
+        const mockArgs: GitHubScriptArguments = {
+            github: mockGithub,
+            context: emptyContext,
+            core,
+        };
+
+        const groupedRuns = await getWorkflowRuns(1234, mockArgs);
+
+        expect(mockGithub.paginate.iterator).toHaveBeenCalledWith(mockGithub.rest.actions.listWorkflowRuns, {
+            owner: "status",
+            repo: "status",
+            workflow_id: 1234,
+            created: expect.any(String),
+        });
+
+        expect(groupedRuns.size).toBe(2);
     });
 });
