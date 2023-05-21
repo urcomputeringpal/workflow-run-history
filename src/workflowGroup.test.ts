@@ -167,7 +167,7 @@ describe("getWorkflowRuns", () => {
                 id: 4,
                 conclusion: "failure",
                 status: "completed",
-                head_branch: "branch-3",
+                head_sha: "c0cda0d",
                 created_at: "2022-01-01T00:00:00Z",
                 updated_at: "2022-01-01T00:40:00Z",
             },
@@ -227,6 +227,6 @@ describe("getWorkflowRuns", () => {
         expect(successGroup!.runs[0].ref).toBe("branch-1");
         expect(successGroup!.runs[1].ref).toBe("branch-1");
         expect(failureGroup!.runs[0].ref).toBe("branch-2");
-        expect(failureGroup!.runs[1].ref).toBe("branch-3");
+        expect(failureGroup!.runs[1].ref).toBe("c0cda0d");
     });
 });

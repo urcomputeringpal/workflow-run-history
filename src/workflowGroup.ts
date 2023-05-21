@@ -70,10 +70,9 @@ export async function getWorkflowRuns(workflow_id: number, args: GitHubScriptArg
             created,
         }
     );
-    console.log(`workflowRunResponse: ${JSON.stringify(workflowRunResponse, null, 2)}`);
     for (const responseWorkflowRun of workflowRunResponse.workflow_runs) {
         console.log(
-            `workflow run ${responseWorkflowRun.id} ${responseWorkflowRun.status} ${responseWorkflowRun.conclusion}`
+            `workflow run ${responseWorkflowRun.id} ${responseWorkflowRun.head_branch} ${responseWorkflowRun.head_sha}`
         );
         if (responseWorkflowRun.conclusion === undefined) {
             continue;
@@ -94,7 +93,10 @@ export async function getWorkflowRuns(workflow_id: number, args: GitHubScriptArg
             created_at: responseWorkflowRun.created_at,
             updated_at: responseWorkflowRun.updated_at,
             durationSeconds: durationSeconds,
-            ref: responseWorkflowRun.head_branch || responseWorkflowRun.head_sha,
+            ref:
+                responseWorkflowRun.head_branch !== undefined && responseWorkflowRun.head_branch !== null
+                    ? responseWorkflowRun.head_branch
+                    : responseWorkflowRun.head_sha,
         };
         if (responseWorkflowRun.conclusion !== null) {
             workflowRun.status = responseWorkflowRun.conclusion;
