@@ -42,8 +42,8 @@ export class WorkflowGroup {
 
 export type GroupedWorkflowRuns = Map<string, WorkflowGroup>;
 
-type ListWorkflowRunsResponseData =
-    Endpoints["GET /repos/{owner}/{repo}/actions/workflows/{workflow_id}/runs"]["response"]["data"];
+type ListWorkflowRunsResponse =
+    Endpoints["GET /repos/{owner}/{repo}/actions/workflows/{workflow_id}/runs"]["response"]["data"]["workflow_runs"];
 
 export async function getWorkflowRuns(workflow_id: number, args: GitHubScriptArguments): Promise<GroupedWorkflowRuns> {
     const workflowRuns: WorkflowRun[] = [];
@@ -62,45 +62,48 @@ export async function getWorkflowRuns(workflow_id: number, args: GitHubScriptArg
     const created = `${startDate}..${endDate}`;
 
     // FIXME also lookup default branch stats, make appropriate comparisons
-    for await (const item of github.paginate.iterator(github.rest.actions.listWorkflowRuns, {
+    for await (const response of github.paginate.iterator(github.rest.actions.listWorkflowRuns, {
         ...context.repo,
         workflow_id,
         created,
     })) {
-        const workflowRunResponse: ListWorkflowRunsResponseData = item.data === undefined ? (item as any) : item.data;
-        console.log(`got ${workflowRunResponse.total_count} workflow runs`);
-        for (const responseWorkflowRun of workflowRunResponse.workflow_runs) {
-            console.log(
-                `workflow run ${responseWorkflowRun.id} ${responseWorkflowRun.head_branch} ${responseWorkflowRun.head_sha}`
-            );
-            if (responseWorkflowRun.conclusion === undefined) {
-                continue;
-            }
-            const status = responseWorkflowRun.status as string;
+        const workflowRunResponse: ListWorkflowRunsResponse =
+            response.data.length === undefined ? (response.data as any).workflow_runs : response.data;
+        if (workflowRunResponse !== undefined) {
+            console.log(`got ${workflowRunResponse.length} workflow runs`);
+            for (const responseWorkflowRun of workflowRunResponse) {
+                console.log(
+                    `workflow run ${responseWorkflowRun.id} ${responseWorkflowRun.head_branch} ${responseWorkflowRun.head_sha}`
+                );
+                if (responseWorkflowRun.conclusion === undefined) {
+                    continue;
+                }
+                const status = responseWorkflowRun.status as string;
 
-            // ignore a few statuses that also don't count as "finished"
-            if (["in_progress", "queued", "requested", "waiting", "pending"].includes(status)) {
-                continue;
-            }
-            const createdAt = new Date(responseWorkflowRun.created_at);
-            const updatedAt = new Date(responseWorkflowRun.updated_at);
-            const durationSeconds = Math.floor((updatedAt.getTime() - createdAt.getTime()) / 1000);
+                // ignore a few statuses that also don't count as "finished"
+                if (["in_progress", "queued", "requested", "waiting", "pending"].includes(status)) {
+                    continue;
+                }
+                const createdAt = new Date(responseWorkflowRun.created_at);
+                const updatedAt = new Date(responseWorkflowRun.updated_at);
+                const durationSeconds = Math.floor((updatedAt.getTime() - createdAt.getTime()) / 1000);
 
-            const workflowRun: WorkflowRun = {
-                id: responseWorkflowRun.id,
-                status: status,
-                created_at: responseWorkflowRun.created_at,
-                updated_at: responseWorkflowRun.updated_at,
-                durationSeconds: durationSeconds,
-                ref:
-                    responseWorkflowRun.head_branch !== undefined && responseWorkflowRun.head_branch !== null
-                        ? responseWorkflowRun.head_branch
-                        : responseWorkflowRun.head_sha,
-            };
-            if (responseWorkflowRun.conclusion !== null) {
-                workflowRun.status = responseWorkflowRun.conclusion;
+                const workflowRun: WorkflowRun = {
+                    id: responseWorkflowRun.id,
+                    status: status,
+                    created_at: responseWorkflowRun.created_at,
+                    updated_at: responseWorkflowRun.updated_at,
+                    durationSeconds: durationSeconds,
+                    ref:
+                        responseWorkflowRun.head_branch !== undefined && responseWorkflowRun.head_branch !== null
+                            ? responseWorkflowRun.head_branch
+                            : responseWorkflowRun.head_sha,
+                };
+                if (responseWorkflowRun.conclusion !== null) {
+                    workflowRun.status = responseWorkflowRun.conclusion;
+                }
+                workflowRuns.push(workflowRun);
             }
-            workflowRuns.push(workflowRun);
         }
     }
 

@@ -181,7 +181,7 @@ describe("getWorkflowRuns", () => {
                     iterator: jest.fn(() => {
                         return {
                             async *[Symbol.asyncIterator]() {
-                                yield mockResponse;
+                                yield { data: mockResponse };
                             },
                         };
                     }),
