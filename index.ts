@@ -2,7 +2,7 @@ import { GitHubScriptArguments } from "@urcomputeringpal/github-script-ts";
 import { getWorkflowRuns } from "./src/workflowGroup";
 import { fetchWorkflowYaml, configOption, ConfigOption } from "./src/workflowYaml";
 
-function summarizePercentile(percentile: number, suffix: string): string {
+function describePercentile(percentile: number, suffix: string): string {
     if (percentile >= 99) {
         return `🐎🐎🐎 Faster than ${percentile}% of ${suffix}`;
     } else if (percentile <= 99 && percentile >= 90) {
@@ -77,10 +77,10 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
                 .getPercentileForDuration(thisRunSeconds);
             core.summary.addList(
                 [
-                    summarizePercentile(successPR, "successful runs of this workflow on PRs."),
-                    summarizePercentile(successDefault, "successful runs of this workflow on the default branch."),
-                    summarizePercentile(failurePR, "failing runs of this workflow on the default branch."),
-                    summarizePercentile(failureDefault, "failing runs of this workflow on the default branch."),
+                    describePercentile(successPR, "successful runs of this workflow on PRs."),
+                    describePercentile(successDefault, "successful runs of this workflow on the default branch."),
+                    describePercentile(failurePR, "failing runs of this workflow on PRs."),
+                    describePercentile(failureDefault, "failing runs of this workflow on the default branch."),
                 ].flat()
             );
 
