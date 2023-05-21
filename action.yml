@@ -16,6 +16,7 @@ runs:
 
           with:
               path: ${{ steps.path.outputs.action_path }}
+              build: npm run test && npm run build
 
         - name: summarizeHistory
           id: function

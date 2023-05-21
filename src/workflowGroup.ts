@@ -1,0 +1,124 @@
+import { GitHubScriptArguments } from "@urcomputeringpal/github-script-ts";
+import { Endpoints } from "@octokit/types";
+
+export interface WorkflowRun {
+    id: number;
+    status: string;
+    created_at: string;
+    updated_at: string;
+    durationSeconds: number;
+    ref: string;
+}
+export class WorkflowGroup {
+    runs: WorkflowRun[];
+
+    constructor(runs: WorkflowRun[]) {
+        this.runs = runs;
+    }
+
+    getNthPercentileDuration = (percentile: number): number => {
+        const durations = this.runs.map(run => run.durationSeconds);
+        const sortedDurations = durations.sort((a, b) => b - a);
+        const index = Math.floor((percentile / 100) * sortedDurations.length);
+        return sortedDurations[index];
+    };
+
+    getPercentileForDuration = (durationSeconds: number): number => {
+        const durations = this.runs.map(run => run.durationSeconds);
+        const sortedDurations = durations.sort((a, b) => b - a);
+        const index = sortedDurations.findIndex(value => value <= durationSeconds);
+        const percentile = (index / sortedDurations.length) * 100;
+        return Math.ceil(percentile);
+    };
+
+    byRef = (ref: string): WorkflowGroup => {
+        return new WorkflowGroup(this.runs.filter(run => run.status === ref));
+    };
+
+    ignoringRefsMatchingPrefixes = (refs: string[]): WorkflowGroup => {
+        return new WorkflowGroup(this.runs.filter(run => !refs.some(ref => run.ref.startsWith(ref))));
+    };
+}
+
+export type GroupedWorkflowRuns = Map<string, WorkflowGroup>;
+
+type ListWorkflowRunsResponseData =
+    Endpoints["GET /repos/{owner}/{repo}/actions/workflows/{workflow_id}/runs"]["response"]["data"];
+
+export async function getWorkflowRuns(workflow_id: number, args: GitHubScriptArguments): Promise<GroupedWorkflowRuns> {
+    const workflowRuns: WorkflowRun[] = [];
+    const { github, context, core } = args;
+    if (github === undefined || context == undefined || core === undefined) {
+        throw new Error("need github, context, and core");
+    }
+
+    const now = new Date();
+    // FIXME allow users to specify date range
+    // get the date 1 week
+    const startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+    const endDate = new Date().toISOString().split("T")[0];
+
+    // Create the `created` parameter for the API request
+    const created = `${startDate}..${endDate}`;
+
+    try {
+        // FIXME also lookup default branch stats, make appropriate comparisons
+        const workflowRunResponse: ListWorkflowRunsResponseData = await github.paginate(
+            github.rest.actions.listWorkflowRuns,
+            {
+                ...context.repo,
+                workflow_id,
+                created,
+            }
+        );
+        const responseWorkflowRuns = workflowRunResponse.workflow_runs;
+        for (const responseWorkflowRun of responseWorkflowRuns) {
+            if (responseWorkflowRun.conclusion === undefined) {
+                continue;
+            }
+            const status = responseWorkflowRun.status as string;
+
+            // ignore a few statuses that also don't count as "finished"
+            if (["in_progress", "queued", "requested", "waiting", "pending"].includes(status)) {
+                continue;
+            }
+            const createdAt = new Date(responseWorkflowRun.created_at);
+            const updatedAt = new Date(responseWorkflowRun.updated_at);
+            const durationSeconds = Math.floor((updatedAt.getTime() - createdAt.getTime()) / 1000);
+
+            const workflowRun: WorkflowRun = {
+                id: responseWorkflowRun.id,
+                status: status,
+                created_at: responseWorkflowRun.created_at,
+                updated_at: responseWorkflowRun.updated_at,
+                durationSeconds: durationSeconds,
+                ref: responseWorkflowRun.head_branch || responseWorkflowRun.head_sha,
+            };
+            if (responseWorkflowRun.conclusion !== null) {
+                workflowRun.status = responseWorkflowRun.conclusion;
+            }
+            workflowRuns.push(workflowRun);
+        }
+    } catch (error) {
+        core.error(`Error loading workflow runs: ${error}`);
+    }
+
+    const groupedRuns = new Map<string, WorkflowGroup>();
+    workflowRuns.forEach(groupRun => {
+        const status = groupRun.status;
+
+        if (!groupedRuns.has(status)) {
+            const runs: WorkflowRun[] = [];
+            const group = new WorkflowGroup(runs);
+
+            groupedRuns.set(status, group);
+        }
+
+        const group = groupedRuns.get(status);
+        if (group) {
+            group.runs.push(groupRun);
+        }
+    });
+
+    return groupedRuns;
+}
