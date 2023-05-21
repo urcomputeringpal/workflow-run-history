@@ -2,6 +2,18 @@ import { GitHubScriptArguments } from "@urcomputeringpal/github-script-ts";
 import { getWorkflowRuns } from "./src/workflowGroup";
 import { fetchWorkflowYaml, configOption, ConfigOption } from "./src/workflowYaml";
 
+function summarizePercentile(percentile: number, suffix: string): string {
+    if (percentile >= 99) {
+        return `🐎🐎🐎 Faster than ${percentile}% of ${suffix}`;
+    } else if (percentile <= 99 && percentile >= 90) {
+        return `🐎🐎 Faster than ${percentile}% of ${suffix}`;
+    } else if (percentile < 90 && percentile > 50) {
+        return `🐎 Faster than ${percentile}% of ${suffix}`;
+    } else {
+        return `Slower than ${100 - percentile}% of ${suffix}`;
+    }
+}
+
 export async function summarizeHistory(args: GitHubScriptArguments): Promise<void> {
     const { github, context, core } = args;
     if (github === undefined || context == undefined || core === undefined) {
@@ -65,14 +77,10 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
                 .getPercentileForDuration(thisRunSeconds);
             core.summary.addList(
                 [
-                    successPR > 0 ? [`Faster than ${successPR}% of successful runs for this workflow on PRs.`] : [],
-                    failurePR > 0 ? [`Faster than ${failurePR}% of failing runs for this workflow on PRs.`] : [],
-                    successDefault > 0
-                        ? [`Faster than ${successDefault}% of successful runs for this workflow on the default branch.`]
-                        : [],
-                    failureDefault > 0
-                        ? [`Faster than ${failureDefault}% of failing runs for this workflow on the default branch.`]
-                        : [],
+                    summarizePercentile(successPR, "successful runs of this workflow on PRs."),
+                    summarizePercentile(successDefault, "successful runs of this workflow on the default branch."),
+                    summarizePercentile(failurePR, "failing runs of this workflow on the default branch."),
+                    summarizePercentile(failureDefault, "failing runs of this workflow on the default branch."),
                 ].flat()
             );
 
