@@ -132,6 +132,58 @@ describe("WorkflowGroup", () => {
             expect(percentile).toBe(60);
         });
     });
+
+    describe("byRef", () => {
+        it("should return runs filtered by ref", () => {
+            const runs: WorkflowRun[] = [
+                {
+                    id: 1,
+                    status: "success",
+                    created_at: "2022-01-01T00:00:00Z",
+                    updated_at: "2022-01-01T00:01:00Z",
+                    durationSeconds: 10,
+                    ref: "main",
+                },
+                {
+                    id: 2,
+                    status: "success",
+                    created_at: "2022-01-01T00:00:00Z",
+                    updated_at: "2022-01-01T00:02:00Z",
+                    durationSeconds: 20,
+                    ref: "main",
+                },
+                {
+                    id: 3,
+                    status: "success",
+                    created_at: "2022-01-01T00:00:00Z",
+                    updated_at: "2022-01-01T00:03:00Z",
+                    durationSeconds: 30,
+                    ref: "main",
+                },
+                {
+                    id: 4,
+                    status: "success",
+                    created_at: "2022-01-01T00:00:00Z",
+                    updated_at: "2022-01-01T00:04:00Z",
+                    durationSeconds: 40,
+                    ref: "",
+                },
+                {
+                    id: 5,
+                    status: "success",
+                    created_at: "2022-01-01T00:00:00Z",
+                    updated_at: "2022-01-01T00:05:00Z",
+                    durationSeconds: 50,
+                    ref: "",
+                },
+            ];
+            const group = new WorkflowGroup(runs);
+            const main = group.byRef("main");
+            expect(main.runs.length).toBe(3);
+            const percentile = main.getNthPercentileDuration(50);
+            expect(percentile).toBe(20);
+        });
+    });
 });
 
 const mockWorkflowRunResponse = {

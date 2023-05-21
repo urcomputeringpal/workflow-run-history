@@ -32,7 +32,7 @@ export class WorkflowGroup {
     };
 
     byRef = (ref: string): WorkflowGroup => {
-        return new WorkflowGroup(this.runs.filter(run => run.status === ref));
+        return new WorkflowGroup(this.runs.filter(run => run.ref === ref));
     };
 
     ignoringRefsMatchingPrefixes = (refs: string[]): WorkflowGroup => {
