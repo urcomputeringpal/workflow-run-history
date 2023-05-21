@@ -50,7 +50,7 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
         const failure = groupedWorkflowRuns.get("failure");
 
         if (success !== undefined && failure !== undefined && success.runs.length + failure.runs.length > 0) {
-            core.summary.addHeading(`Compared against ${totalRuns} over the last week`, 3);
+            core.summary.addHeading(`Compared to ${totalRuns} runs over the last week`, 3);
             const successPR = success
                 .ignoringRefsMatchingPrefixes([`refs/heads/${process.env.DEFAULT_BRANCH ?? "main"}`, "refs/tag"])
                 .getPercentileForDuration(thisRunSeconds);
