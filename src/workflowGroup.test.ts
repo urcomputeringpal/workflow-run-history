@@ -177,7 +177,15 @@ describe("getWorkflowRuns", () => {
         jest.resetModules();
         jest.doMock("@octokit/rest", () => {
             const Octokit = class MockOctokit {
-                paginate = jest.fn().mockResolvedValue(mockResponse);
+                paginate = {
+                    iterator: jest.fn(() => {
+                        return {
+                            async *[Symbol.asyncIterator]() {
+                                yield mockResponse;
+                            },
+                        };
+                    }),
+                };
                 rest = {
                     actions: jest.fn().mockResolvedValue(mockResponse),
                 };
@@ -206,7 +214,7 @@ describe("getWorkflowRuns", () => {
 
         const groupedRuns = await getWorkflowRuns(1234, mockArgs);
 
-        expect(mockGithub.paginate).toHaveBeenCalledWith(mockGithub.rest.actions.listWorkflowRuns, {
+        expect(mockGithub.paginate.iterator).toHaveBeenCalledWith(mockGithub.rest.actions.listWorkflowRuns, {
             owner: "status",
             repo: "status",
             workflow_id: 1234,
