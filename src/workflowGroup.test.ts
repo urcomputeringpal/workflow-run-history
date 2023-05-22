@@ -128,8 +128,9 @@ describe("WorkflowGroup", () => {
                 },
             ];
             const group = new WorkflowGroup(runs);
-            const percentile = group.getPercentileForDuration(25);
-            expect(percentile).toBe(60);
+            expect(group.getPercentileForDuration(25)).toBe(60);
+            expect(group.getPercentileForDuration(100)).toBe(0);
+            expect(group.getPercentileForDuration(1)).toBe(100);
         });
     });
 

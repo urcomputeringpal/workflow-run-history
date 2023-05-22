@@ -27,8 +27,12 @@ export class WorkflowGroup {
         const durations = this.runs.map(run => run.durationSeconds);
         const sortedDurations = durations.sort((a, b) => b - a);
         const index = sortedDurations.findIndex(value => value <= durationSeconds);
-        const percentile = (index / sortedDurations.length) * 100;
-        return Math.ceil(percentile);
+        if (index == -1) {
+            return 100;
+        } else {
+            const percentile = (index / sortedDurations.length) * 100;
+            return Math.ceil(percentile);
+        }
     };
 
     byRef = (ref: string): WorkflowGroup => {

@@ -1,17 +1,28 @@
 import { GitHubScriptArguments } from "@urcomputeringpal/github-script-ts";
 import { getWorkflowRuns } from "./src/workflowGroup";
-import { fetchWorkflowYaml, configOption, ConfigOption } from "./src/workflowYaml";
 
 function describePercentile(percentile: number, suffix: string): string {
-    if (percentile >= 99) {
+    if (percentile == 100) {
+        return `💎💎💎 Faster than all ${suffix}`;
+    } else if (percentile >= 99) {
         return `🐎🐎🐎 Faster than ${percentile}% of ${suffix}`;
     } else if (percentile <= 99 && percentile >= 90) {
         return `🐎🐎 Faster than ${percentile}% of ${suffix}`;
-    } else if (percentile < 90 && percentile > 50) {
+    } else if (percentile < 90 && percentile > 75) {
         return `🐎 Faster than ${percentile}% of ${suffix}`;
+    } else if (percentile < 75 && percentile > 50) {
+        return `Faster than ${percentile}% of ${suffix}`;
+    } else if (percentile == 50) {
+        return `Perfectly average among ${suffix}`;
+    } else if (percentile == 0) {
+        return `The slowest of all ${suffix}`;
     } else {
         return `Slower than ${100 - percentile}% of ${suffix}`;
     }
+}
+
+export enum EnvInput {
+    TARGET_SECONDS = "target-seconds",
 }
 
 export async function summarizeHistory(args: GitHubScriptArguments): Promise<void> {
@@ -20,13 +31,14 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
         throw new Error("");
     }
 
+    const defaultBranch = context.payload.repository?.default_branch ?? "main";
+
     const run = await github.rest.actions.getWorkflowRun({
         ...context.repo,
         run_id: context.runId,
     });
     const workflow_id = run.data.workflow_id;
-
-    const workflowYaml = await fetchWorkflowYaml(workflow_id.toString(), { github, context });
+    run.data;
 
     getWorkflowRuns(workflow_id, { github, context, core }).then(groupedWorkflowRuns => {
         const totalRuns = Array.from(groupedWorkflowRuns.values()).reduce(
@@ -34,95 +46,161 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
             0
         );
 
-        const startedAt = new Date(run.data.run_started_at!);
-        const now = new Date();
-        const thisRunSeconds = Math.floor((now.getTime() - startedAt.getTime()) / 1000);
+        if (totalRuns > 0) {
+            core.summary.addHeading(`History of ${totalRuns} runs over the last week`);
 
-        let targetSeconds: number | undefined = undefined;
-        if (workflowYaml !== undefined) {
-            const target = configOption(ConfigOption.target, workflowYaml);
+            // const table = Array.from(groupedWorkflowRuns.keys())
+            //     .map(status => {
+            //         return {
+            //             status: status,
+            //             percent: Math.ceil((groupedWorkflowRuns.get(status)!.runs.length / totalRuns) * 100),
+            //         };
+            //     })
+            //     .sort((a, b) => b.percent - a.percent);
+            // core.summary.addTable([
+            //     [
+            //         { data: "Status", header: true },
+            //         { data: "Percent", header: true },
+            //     ],
+            //     ...table.map(row => [row.status, `${row.percent}%`]),
+            // ]);
+
+            const success = groupedWorkflowRuns.get("success");
+            const failure = groupedWorkflowRuns.get("failure");
+
+            // If we have both success and failures, report on the relative success
+            if (success !== undefined && failure !== undefined && success.runs.length + failure.runs.length > 0) {
+                core.summary.addHeading("Success Rate", 2);
+
+                const successPR = success.ignoringRefsMatchingPrefixes([`refs/heads/${defaultBranch}`, "refs/tag"]);
+                const successDefault = success.byRef(defaultBranch);
+                const failurePR = failure.ignoringRefsMatchingPrefixes([`refs/heads/${defaultBranch}`, "refs/tag"]);
+                const failureDefault = failure.byRef(defaultBranch);
+
+                // TODO targets
+                if (successDefault.runs.length + failureDefault.runs.length > 0) {
+                    core.summary.addHeading(
+                        `${
+                            successDefault.runs.length / (successDefault.runs.length + failureDefault.runs.length)
+                        }% successful on ${defaultBranch}`,
+                        3
+                    );
+                }
+                if (successPR.runs.length + failurePR.runs.length > 0) {
+                    core.summary.addHeading(
+                        `${successPR.runs.length / (successPR.runs.length + failurePR.runs.length)}% successful on PRs`,
+                        3
+                    );
+                }
+            } else if (success !== undefined && success.runs.length > 0) {
+                core.summary.addHeading(`All ${success.runs.length} runs have completed successfully!`, 2);
+                core.summary.addImage(
+                    "https://github-production-user-asset-6210df.s3.amazonaws.com/47/239895139-7c91b1f5-7e0a-4123-86d7-6b92aa879de2.jpg",
+                    "my codes are perfect"
+                );
+            } else if (failure !== undefined && failure.runs.length > 0) {
+                core.summary.addHeading(`All ${failure.runs.length} runs have failed.`, 2);
+            }
+
+            core.summary.addSeparator();
+            core.summary.addHeading("Performance", 2);
+
+            const startedAt = new Date(run.data.run_started_at!);
+            const now = new Date();
+            const thisRunSeconds = Math.floor((now.getTime() - startedAt.getTime()) / 1000);
+
+            let targetSeconds: number | undefined = undefined;
+            const target = process.env.TARGET_SECONDS ?? "60";
 
             if (target !== undefined) {
-                const intTarget = parseInt(target);
-                if (thisRunSeconds < intTarget) {
-                    core.summary.addHeading(`✅ ${thisRunSeconds}s elapsed (target ${target}s)`, 2);
+                targetSeconds = parseInt(target);
+                if (thisRunSeconds < targetSeconds) {
+                    core.summary.addHeading(`This run: ${thisRunSeconds}s elapsed (✅ target ${target}s)`, 3);
                 } else {
-                    core.summary.addHeading(`⚠️ ${thisRunSeconds}s elapsed (target ${target}s)`, 2);
+                    core.summary.addHeading(`This run: ${thisRunSeconds}s elapsed (⚠️ target ${target}s)`, 3);
                 }
             } else {
-                core.summary.addHeading(`${thisRunSeconds} elapsed`, 2);
-                console.log(`Warning: no target runtime specified in workflow YAML: ${workflowYaml}`);
+                core.summary.addHeading(`This run: ${thisRunSeconds}s elapsed`, 3);
+                console.log(`Warning: no target-seconds value found`);
                 core.summary.addRaw(
-                    `> :warning: No target runtime specified in workflow YAML. Add \`${ConfigOption.target}: <seconds>\` to the \`env\` section to add a target.`
+                    `> :warning: No target runtime configured. Add \`${EnvInput.TARGET_SECONDS}: <seconds>\` to the \`with\` arguments provided to \`urcomputeringpal/workflow-run-history\` in this workflow to set a target runtime.`
                 );
             }
-        }
 
-        const success = groupedWorkflowRuns.get("success");
-        const failure = groupedWorkflowRuns.get("failure");
-
-        if (success !== undefined && failure !== undefined && success.runs.length + failure.runs.length > 0) {
-            core.summary.addHeading(`Compared to ${totalRuns} runs over the last week`, 3);
-            const successPR = success
-                .ignoringRefsMatchingPrefixes([`refs/heads/${process.env.DEFAULT_BRANCH ?? "main"}`, "refs/tag"])
-                .getPercentileForDuration(thisRunSeconds);
-            const failurePR = failure
-                .ignoringRefsMatchingPrefixes([`refs/heads/${process.env.DEFAULT_BRANCH ?? "main"}`, "refs/tag"])
-                .getPercentileForDuration(thisRunSeconds);
-            const successDefault = success
-                .byRef(process.env.DEFAULT_BRANCH ?? "main")
-                .getPercentileForDuration(thisRunSeconds);
-            const failureDefault = failure
-                .byRef(process.env.DEFAULT_BRANCH ?? "main")
-                .getPercentileForDuration(thisRunSeconds);
-            core.summary.addList(
-                [
-                    describePercentile(successPR, "successful runs of this workflow on PRs."),
-                    describePercentile(successDefault, "successful runs of this workflow on the default branch."),
-                    describePercentile(failurePR, "failing runs of this workflow on PRs."),
-                    describePercentile(failureDefault, "failing runs of this workflow on the default branch."),
-                ].flat()
-            );
-
-            core.summary.addHeading(
-                `${Math.round((success.runs.length / (success.runs.length + failure.runs.length)) * 100)}% successful`
-            );
-        }
-        if (success !== undefined && success.runs.length > 0) {
-            core.summary.addHeading(`${success.runs.length} successful runs`).addTable([
-                [
-                    { data: "Percentile", header: true },
-                    { data: "Success duration in seconds", header: true },
-                ],
-                ["99th", `${success.getNthPercentileDuration(99)}`],
-                ["90th", `${success.getNthPercentileDuration(90)}`],
-                ["50th", `${success.getNthPercentileDuration(50)}`],
-                ["10th", `${success.getNthPercentileDuration(10)}`],
-            ]);
-        }
-        if (failure !== undefined && failure.runs.length > 0) {
-            core.summary.addHeading(`${failure.runs.length} failing runs`).addTable([
-                [
-                    { data: "Percentile", header: true },
-                    { data: "Success duration in seconds", header: true },
-                ],
-                ["99th", `${failure.getNthPercentileDuration(99)}`],
-                ["90th", `${failure.getNthPercentileDuration(90)}`],
-                ["50th", `${failure.getNthPercentileDuration(50)}`],
-                ["10th", `${failure.getNthPercentileDuration(10)}`],
-            ]);
-        }
-        if (totalRuns > 0) {
-            const table = Array.from(groupedWorkflowRuns.keys()).map(status => {
-                return [status, `${Math.ceil((groupedWorkflowRuns.get(status)!.runs.length / totalRuns) * 100)}%`];
-            });
-            core.summary.addHeading("Status breakdown").addTable([
-                [
-                    { data: "Status", header: true },
-                    { data: "Percent of total", header: true },
-                ],
-                ...table,
-            ]);
+            if (success !== undefined && success.runs.length) {
+                const successPR = success.ignoringRefsMatchingPrefixes([`refs/heads/${defaultBranch}`, "refs/tag"]);
+                const successDefault = success.byRef(defaultBranch);
+                core.summary
+                    .addHeading(`Compared to ${success.runs.length} successful runs`, 4)
+                    .addList(
+                        [
+                            successPR.runs.length > 0
+                                ? [
+                                      describePercentile(
+                                          successPR.getPercentileForDuration(thisRunSeconds),
+                                          "successful runs of this workflow on PRs"
+                                      ),
+                                  ]
+                                : [],
+                            successDefault.runs.length > 0
+                                ? [
+                                      describePercentile(
+                                          successDefault.getPercentileForDuration(thisRunSeconds),
+                                          `successful runs of this workflow on ${defaultBranch}`
+                                      ),
+                                  ]
+                                : [],
+                        ].flat()
+                    )
+                    .addTable([
+                        [
+                            { data: "Percentile", header: true },
+                            { data: "Seconds", header: true },
+                        ],
+                        ["99th", `${success.getNthPercentileDuration(99)}`],
+                        ["90th", `${success.getNthPercentileDuration(90)}`],
+                        ["50th", `${success.getNthPercentileDuration(50)}`],
+                        ["10th", `${success.getNthPercentileDuration(10)}`],
+                    ]);
+            }
+            if (failure !== undefined && failure.runs.length > 0) {
+                const failurePR = failure.ignoringRefsMatchingPrefixes([`refs/heads/${defaultBranch}`, "refs/tag"]);
+                const failureDefault = failure.byRef(defaultBranch);
+                core.summary
+                    .addHeading(`Compared to ${failure.runs.length} failing runs`, 4)
+                    .addList(
+                        [
+                            failurePR.runs.length > 0
+                                ? [
+                                      describePercentile(
+                                          failurePR.getPercentileForDuration(thisRunSeconds),
+                                          "failing runs of this workflow on PRs."
+                                      ),
+                                  ]
+                                : [],
+                            failureDefault.runs.length > 0
+                                ? [
+                                      describePercentile(
+                                          failureDefault.getPercentileForDuration(thisRunSeconds),
+                                          `failing runs of this workflow on ${defaultBranch}`
+                                      ),
+                                  ]
+                                : [],
+                        ].flat()
+                    )
+                    .addTable([
+                        [
+                            { data: "Percentile", header: true },
+                            { data: "Seconds", header: true },
+                        ],
+                        ["99th", `${failure.getNthPercentileDuration(99)}`],
+                        ["90th", `${failure.getNthPercentileDuration(90)}`],
+                        ["50th", `${failure.getNthPercentileDuration(50)}`],
+                        ["10th", `${failure.getNthPercentileDuration(10)}`],
+                    ]);
+            }
+        } else {
+            core.summary.addHeading(`🎉 First run!`);
         }
         core.summary.write();
     });
