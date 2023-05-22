@@ -8,13 +8,13 @@ on:
         - cron: "0 * * * *"
 
 jobs:
-    prepare:
+    test:
         runs-on: ubuntu-latest
         steps:
             - run: sleep 5
     workflow-run-history:
-        name: workflow run history
-        needs: prepare
+        name: Workflow
+        needs: test
         runs-on: ubuntu-latest
         steps:
             - name: Checkout
@@ -22,8 +22,3 @@ jobs:
             - uses: ./
               id: summarizeHistory
               timeout-minutes: 2
-    test:
-        needs: workflow-run-history
-        runs-on: ubuntu-latest
-        steps:
-            - run: echo true
