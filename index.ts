@@ -4,20 +4,24 @@ import { getWorkflowRuns } from "./src/workflowGroup";
 function describePercentile(percentile: number, suffix: string): string {
     if (percentile == 100) {
         return `💎💎💎 Faster than all ${suffix}`;
+    } else if (percentile == 50) {
+        return `👍 Perfectly average among ${suffix}`;
+    } else if (percentile == 0) {
+        return `🐌🐌🐌 Slower than all ${suffix}`;
     } else if (percentile >= 99) {
         return `🐎🐎🐎 Faster than ${percentile}% of ${suffix}`;
     } else if (percentile <= 99 && percentile >= 90) {
         return `🐎🐎 Faster than ${percentile}% of ${suffix}`;
     } else if (percentile < 90 && percentile > 75) {
         return `🐎 Faster than ${percentile}% of ${suffix}`;
-    } else if (percentile < 75 && percentile > 50) {
-        return `Faster than ${percentile}% of ${suffix}`;
-    } else if (percentile == 50) {
-        return `Perfectly average among ${suffix}`;
-    } else if (percentile == 0) {
-        return `The slowest of all ${suffix}`;
-    } else {
+    } else if (percentile < 75 && percentile > 40) {
+        return `👍 Faster than ${percentile}% of ${suffix}`;
+    } else if (percentile < 40 && percentile > 25) {
         return `Slower than ${100 - percentile}% of ${suffix}`;
+    } else if (percentile <= 25 && percentile > 10) {
+        return `🐌 Slower than ${100 - percentile}% of ${suffix}`;
+    } else if (percentile <= 10) {
+        return `🐌🐌 Slower than ${100 - percentile}% of ${suffix}`;
     }
 }
 
@@ -38,7 +42,12 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
         run_id: context.runId,
     });
     const workflow_id = run.data.workflow_id;
-    run.data;
+
+    // TODO link to the workflow history
+    // const workflowResponse = await github.rest.actions.getWorkflow({
+    //     ...context.repo,
+    //     workflow_id,
+    // });
 
     getWorkflowRuns(workflow_id, { github, context, core }).then(groupedWorkflowRuns => {
         const totalRuns = Array.from(groupedWorkflowRuns.values()).reduce(
@@ -79,18 +88,16 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
 
                 // TODO targets
                 if (successDefault.runs.length + failureDefault.runs.length > 0) {
-                    core.summary.addHeading(
-                        `${
-                            successDefault.runs.length / (successDefault.runs.length + failureDefault.runs.length)
-                        }% successful on ${defaultBranch}`,
-                        3
+                    const defaultRate = Math.ceil(
+                        (successDefault.runs.length / (successDefault.runs.length + failureDefault.runs.length)) * 100
                     );
+                    core.summary.addHeading(`${defaultRate}% successful on ${defaultBranch}`, 3);
                 }
                 if (successPR.runs.length + failurePR.runs.length > 0) {
-                    core.summary.addHeading(
-                        `${successPR.runs.length / (successPR.runs.length + failurePR.runs.length)}% successful on PRs`,
-                        3
+                    const prRate = Math.ceil(
+                        (successPR.runs.length / (successPR.runs.length + failurePR.runs.length)) * 100
                     );
+                    core.summary.addHeading(`${prRate}% successful on PRs`, 3);
                 }
             } else if (success !== undefined && success.runs.length > 0) {
                 core.summary.addHeading(`All ${success.runs.length} runs have completed successfully!`, 2);
