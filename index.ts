@@ -168,6 +168,7 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
                         ["90th", `${success.getNthPercentileDuration(90)}`],
                         ["50th", `${success.getNthPercentileDuration(50)}`],
                         ["10th", `${success.getNthPercentileDuration(10)}`],
+                        ["1st", `${success.getNthPercentileDuration(1)}`],
                     ]);
             }
             if (failure !== undefined && failure.runs.length > 0) {
@@ -204,6 +205,7 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
                         ["90th", `${failure.getNthPercentileDuration(90)}`],
                         ["50th", `${failure.getNthPercentileDuration(50)}`],
                         ["10th", `${failure.getNthPercentileDuration(10)}`],
+                        ["1st", `${failure.getNthPercentileDuration(1)}`],
                     ]);
             }
         } else {
