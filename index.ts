@@ -181,7 +181,7 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
                                 ? [
                                       describePercentile(
                                           failurePR.getPercentileForDuration(thisRunSeconds),
-                                          "failing runs of this workflow on PRs."
+                                          "failing runs of this workflow on PRs"
                                       ),
                                   ]
                                 : [],
