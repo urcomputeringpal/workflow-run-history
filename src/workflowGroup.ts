@@ -39,8 +39,23 @@ export class WorkflowGroup {
         return new WorkflowGroup(this.runs.filter(run => run.ref === ref));
     };
 
+    tags = (): WorkflowGroup => {
+        return new WorkflowGroup(this.runs.filter(run => run.ref.startsWith("refs/tags/")));
+    };
+
     ignoringRefsMatchingPrefixes = (refs: string[]): WorkflowGroup => {
         return new WorkflowGroup(this.runs.filter(run => !refs.some(ref => run.ref.startsWith(ref))));
+    };
+
+    setTargetPercentileOutput = (name: string, targetSeconds: number, targetPercentile: number, core: any): void => {
+        if (this.runs.length > 0) {
+            const targetPercentileCandidate = this.getNthPercentileDuration(targetPercentile);
+            if (targetPercentileCandidate < targetSeconds) {
+                core.setOutput(`hit-target-${name}-percentile`, true);
+            } else {
+                core.setOutput(`hit-target-${name}-percentile`, false);
+            }
+        }
     };
 }
 

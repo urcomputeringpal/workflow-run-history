@@ -25,8 +25,42 @@ function describePercentile(percentile: number, suffix: string): string {
     }
 }
 
-export enum EnvInput {
+enum EnvInputName {
     TARGET_SECONDS = "target-seconds",
+    TARGET_PERCENTILE = "target-percentile",
+
+    TARGET_DEFAULT_SECONDS = "target-default-seconds",
+    TARGET_DEFAULT_PERCENTILE = "target-default-percentile",
+    TARGET_TAG_SECONDS = "target-tag-seconds",
+    TARGET_TAG_PERCENTILE = "target-tag-percentile",
+
+    TARGET_PR_PERCENTILE = "target-pr-percentile",
+    TARGET_PR_SECONDS = "target-pr-seconds",
+    TARGET_PR_FAILURE_PERCENTILE = "target-pr-failure-percentile",
+    TARGET_PR_FAILURE_SECONDS = "target-pr-failure-seconds",
+
+    TARGET_DEFAULT_SUCCESS_RATE = "target-default-success-rate",
+    TARGET_TAG_SUCCESS_RATE = "target-tag-success-rate",
+    TARGET_PR_SUCCESS_RATE = "target-pr-success-rate",
+}
+
+enum EnvInputValue {
+    targetSeconds = parseInt(process.env.TARGET_SECONDS ?? "60"),
+    targetPercentile = parseInt(process.env.TARGET_PERCENTILE ?? "50"),
+
+    targetDefaultSeconds = parseInt(process.env.TARGET_DEFAULT_SECONDS ?? `${targetSeconds}`),
+    targetDefaultPercentile = parseInt(process.env.TARGET_DEFAULT_PERCENTILE ?? `${targetPercentile}`),
+    targetTagSeconds = parseInt(process.env.TARGET_TAG_SECONDS ?? `${targetDefaultSeconds}`),
+    targetTagPercentile = parseInt(process.env.TARGET_TAG_PERCENTILE ?? `${targetDefaultPercentile}`),
+
+    targetPrPercentile = parseInt(process.env.TARGET_PR_PERCENTILE ?? `${targetPercentile}`),
+    targetPrSeconds = parseInt(process.env.TARGET_PR_SECONDS ?? `${targetSeconds}`),
+    targetPrFailurePercentile = parseInt(process.env.TARGET_PR_FAILURE_PERCENTILE ?? `${targetPrPercentile}`),
+    targetPrFailureSeconds = parseInt(process.env.TARGET_PR_FAILURE_SECONDS ?? `${targetPrSeconds}`),
+
+    targetDefaultSuccessRate = parseInt(process.env.TARGET_DEFAULT_SUCCESS_RATE ?? "99"),
+    targetTagSuccessRate = parseInt(process.env.TARGET_TAG_SUCCESS_RATE ?? `${targetDefaultSuccessRate}`),
+    targetPrSuccessRate = parseInt(process.env.TARGET_PR_SUCCESS_RATE ?? "90"),
 }
 
 export async function summarizeHistory(args: GitHubScriptArguments): Promise<void> {
@@ -86,20 +120,26 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
                 const failurePR = failure.ignoringRefsMatchingPrefixes([`refs/heads/${defaultBranch}`, "refs/tag"]);
                 const failureDefault = failure.byRef(defaultBranch);
 
-                // TODO targets
                 if (successDefault.runs.length + failureDefault.runs.length > 0) {
                     const defaultRate = Math.ceil(
                         (successDefault.runs.length / (successDefault.runs.length + failureDefault.runs.length)) * 100
                     );
+                    const targetDefaultRate = parseInt(process.env.TARGET_DEFAULT_SUCCESS_RATE ?? "99");
+                    core.setOutput("hit-target-default-success-rate", defaultRate < targetDefaultRate);
                     core.summary.addHeading(`${defaultRate}% successful on ${defaultBranch}`, 3);
                 }
                 if (successPR.runs.length + failurePR.runs.length > 0) {
                     const prRate = Math.ceil(
                         (successPR.runs.length / (successPR.runs.length + failurePR.runs.length)) * 100
                     );
+                    const targetPrRate = parseInt(process.env.TARGET_PR_SUCCESS_RATE ?? "90");
+                    core.setOutput("hit-target-pr-success-rate", prRate < targetPrRate);
                     core.summary.addHeading(`${prRate}% successful on PRs`, 3);
                 }
             } else if (success !== undefined && success.runs.length > 0) {
+                core.setOutput("hit-target-default-success-rate", true);
+                core.setOutput("hit-target-pr-success-rate", true);
+
                 core.summary.addHeading(`All ${success.runs.length} runs have completed successfully!`, 2);
                 core.summary.addImage(
                     "https://github-production-user-asset-6210df.s3.amazonaws.com/47/239895139-7c91b1f5-7e0a-4123-86d7-6b92aa879de2.jpg",
@@ -107,6 +147,8 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
                 );
             } else if (failure !== undefined && failure.runs.length > 0) {
                 core.summary.addHeading(`All ${failure.runs.length} runs have failed.`, 2);
+                core.setOutput("hit-target-default-success-rate", false);
+                core.setOutput("hit-target-pr-success-rate", false);
             }
 
             core.summary.addSeparator();
@@ -116,44 +158,64 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
             const now = new Date();
             const thisRunSeconds = Math.floor((now.getTime() - startedAt.getTime()) / 1000);
 
-            let targetSeconds: number | undefined = undefined;
-            const target = process.env.TARGET_SECONDS ?? "60";
-
-            if (target !== undefined) {
-                targetSeconds = parseInt(target);
-                if (thisRunSeconds < targetSeconds) {
-                    core.summary.addHeading(`This run: ${thisRunSeconds}s elapsed (✅ target ${target}s)`, 3);
-                } else {
-                    core.summary.addHeading(`This run: ${thisRunSeconds}s elapsed (⚠️ target ${target}s)`, 3);
-                }
+            if (EnvInputValue.targetSeconds !== undefined) {
+                core.setOutput("hit-target-seconds", thisRunSeconds < EnvInputValue.targetSeconds);
+                core.summary.addHeading(
+                    thisRunSeconds < EnvInputValue.targetSeconds
+                        ? `This run: ${thisRunSeconds}s elapsed (✅ target ${EnvInputValue.targetSeconds}s)`
+                        : `This run: ${thisRunSeconds}s elapsed (⚠️ target ${EnvInputValue.targetSeconds}s)`,
+                    3
+                );
             } else {
                 core.summary.addHeading(`This run: ${thisRunSeconds}s elapsed`, 3);
                 console.log(`Warning: no target-seconds value found`);
                 core.summary.addRaw(
-                    `> :warning: No target runtime configured. Add \`${EnvInput.TARGET_SECONDS}: <seconds>\` to the \`with\` arguments provided to \`urcomputeringpal/workflow-run-history\` in this workflow to set a target runtime.`
+                    `> :warning: No target runtime configured. Add \`${EnvInputName.TARGET_SECONDS}: <seconds>\` to the \`with\` arguments provided to \`urcomputeringpal/workflow-run-history\` in this workflow to set a target runtime.`
                 );
             }
 
             if (success !== undefined && success.runs.length) {
-                const successPR = success.ignoringRefsMatchingPrefixes([`refs/heads/${defaultBranch}`, "refs/tag"]);
                 const successDefault = success.byRef(defaultBranch);
+                successDefault.setTargetPercentileOutput(
+                    "default-success",
+                    EnvInputValue.targetDefaultSeconds,
+                    EnvInputValue.targetDefaultPercentile,
+                    core
+                );
+
+                const successTag = success.tags();
+                successTag.setTargetPercentileOutput(
+                    "tag-success",
+                    EnvInputValue.targetTagSeconds,
+                    EnvInputValue.targetTagPercentile,
+                    core
+                );
+
+                const successPR = success.ignoringRefsMatchingPrefixes([`refs/heads/${defaultBranch}`, "refs/tag"]);
+                successPR.setTargetPercentileOutput(
+                    "pr-success",
+                    EnvInputValue.targetPrSeconds,
+                    EnvInputValue.targetPrPercentile,
+                    core
+                );
+
                 core.summary
                     .addHeading(`Compared to ${success.runs.length} successful runs`, 4)
                     .addList(
                         [
-                            successPR.runs.length > 0
-                                ? [
-                                      describePercentile(
-                                          successPR.getPercentileForDuration(thisRunSeconds),
-                                          "successful runs of this workflow on PRs"
-                                      ),
-                                  ]
-                                : [],
                             successDefault.runs.length > 0
                                 ? [
                                       describePercentile(
                                           successDefault.getPercentileForDuration(thisRunSeconds),
                                           `successful runs of this workflow on ${defaultBranch}`
+                                      ),
+                                  ]
+                                : [],
+                            successPR.runs.length > 0
+                                ? [
+                                      describePercentile(
+                                          successPR.getPercentileForDuration(thisRunSeconds),
+                                          "successful runs of this workflow on PRs"
                                       ),
                                   ]
                                 : [],
@@ -173,6 +235,12 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
             }
             if (failure !== undefined && failure.runs.length > 0) {
                 const failurePR = failure.ignoringRefsMatchingPrefixes([`refs/heads/${defaultBranch}`, "refs/tag"]);
+                failurePR.setTargetPercentileOutput(
+                    "failure-pr",
+                    EnvInputValue.targetPrFailureSeconds,
+                    EnvInputValue.targetPrFailurePercentile,
+                    core
+                );
                 const failureDefault = failure.byRef(defaultBranch);
                 core.summary
                     .addHeading(`Compared to ${failure.runs.length} failing runs`, 4)

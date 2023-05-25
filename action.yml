@@ -1,10 +1,87 @@
 name: Summarize Workflow History
 description: Performance, success rate, etc
 inputs:
+    target-default-success-rate:
+        description: "Target default branch success rate"
+        required: false
+        default: "99"
+    target-pr-success-rate:
+        description: "Target PR success rate"
+        required: false
+        default: "90"
+    target-tag-success-rate:
+        description: "Target tag success rate"
+        required: false
+        default: "99"
+
     target-seconds:
-        description: "Target seconds"
+        description: "Target runtime seconds. Defaults to 60."
         required: false
         default: "60"
+    target-percentile:
+        description: "Target percentile. Higher percentiles are faster. Defaults to 50 (average)."
+        required: false
+        default: "50"
+
+    target-default-seconds:
+        description: "Target latency for default branch in seconds. Defaults to `target-seconds`."
+        required: false
+    target-default-percentile:
+        description: "Target percentile for default branch runtime. Defaults to `target-percentile`."
+        required: false
+
+    target-tag-seconds:
+        description: "Target latency for tag runtime. Defaults to `target-default-seconds`."
+        required: false
+    target-tag-percentile:
+        description: "Target percentile for tag runtime. Defaults to `target-default-percentile`."
+        required: false
+
+    target-pr-seconds:
+        description: "Target latency for PR runtime. Defaults to `target-seconds`."
+        required: false
+        default: "60"
+    target-pr-percentile:
+        description: "Target percentile for PR runtime. Defaults to `target-percentile`."
+        required: false
+        default: "50"
+
+    target-pr-failure-seconds:
+        description: "Target latency for PR failure runtime. Defaults to `target-pr-seconds`."
+        required: false
+        default: "60"
+    target-pr-failure-percentile:
+        description: "Target percentile for PR failure runtime. Defaults to `target-pr-percentile`."
+        required: false
+        default: "50"
+
+outputs:
+    hit-target-default-success-rate:
+        description: "Hit target default success rate"
+        value: ${{ steps.function.outputs.hit-target-default-success-rate }}
+    hit-target-tag-success-rate:
+        description: "Hit target tag success rate"
+        value: ${{ steps.function.outputs.hit-target-tag-success-rate }}
+    hit-target-pr-success-rate:
+        description: "Hit target PR success rate"
+        value: ${{ steps.function.outputs.hit-target-pr-success-rate }}
+
+    hit-target-seconds:
+        description: "Hit target seconds"
+        value: ${{ steps.function.outputs.hit-target-seconds }}
+
+    hit-target-default-success-percentile:
+        description: "Hit target default success percentile"
+        value: ${{ steps.function.outputs.hit-target-default-success-percentile }}
+    hit-target-tag-success-percentile:
+        description: "Hit target tag success rate"
+        value: ${{ steps.function.outputs.hit-target-tag-success-percentile }}
+    hit-target-pr-success-percentile:
+        description: "Hit target PR success percentile"
+        value: ${{ steps.function.outputs.hit-target-pr-success-percentile }}
+    hit-target-failure-pr-percentile:
+        description: "Hit target failure PR percentile"
+        value: ${{ steps.function.outputs.hit-target-failure-pr-percentile }}
 
 runs:
     using: "composite"
