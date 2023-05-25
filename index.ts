@@ -67,7 +67,7 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
                         (successPR.runs.length / (successPR.runs.length + failurePR.runs.length)) * 100
                     );
                     const targetPrRate = parseInt(process.env.TARGET_PR_SUCCESS_RATE ?? "90");
-                    const hitTarget = prRate < targetPrRate;
+                    const hitTarget = prRate > targetPrRate;
                     core.setOutput("hit-target-pr-success-rate", hitTarget);
                     core.summary.addHeading(
                         `${prRate}% successful on PRs (${hitTargetEmoji(hitTarget)} target ${targetPrRate}%)`,
@@ -80,7 +80,7 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
                         (successDefault.runs.length / (successDefault.runs.length + failureDefault.runs.length)) * 100
                     );
                     const targetDefaultRate = parseInt(process.env.TARGET_DEFAULT_SUCCESS_RATE ?? "99");
-                    const hitTarget = defaultRate < targetDefaultRate;
+                    const hitTarget = defaultRate > targetDefaultRate;
                     core.setOutput("hit-target-default-success-rate", hitTarget);
                     core.summary.addHeading(
                         ` ${defaultRate}% successful on ${defaultBranch} (${hitTargetEmoji(
@@ -94,7 +94,7 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
                         (successTags.runs.length / (successTags.runs.length + failureTags.runs.length)) * 100
                     );
                     const targetTagRate = parseInt(process.env.TARGET_TAG_SUCCESS_RATE ?? "99");
-                    const hitTarget = tagRate < targetTagRate;
+                    const hitTarget = tagRate > targetTagRate;
                     core.setOutput("hit-target-tag-success-rate", hitTarget);
                     core.summary.addHeading(
                         `${tagRate}% successful on tags (${hitTargetEmoji(hitTarget)} target ${targetTagRate}%)`,

@@ -50,7 +50,7 @@ export class WorkflowGroup {
     setTargetPercentileOutput = (name: string, targetSeconds: number, targetPercentile: number, core: any): void => {
         if (this.runs.length > 0) {
             const targetPercentileCandidate = this.getNthPercentileDuration(targetPercentile);
-            if (targetPercentileCandidate < targetSeconds) {
+            if (targetSeconds < targetPercentileCandidate ) {
                 core.setOutput(`hit-target-${name}-percentile`, true);
             } else {
                 core.setOutput(`hit-target-${name}-percentile`, false);
