@@ -106,19 +106,6 @@ runs:
 
         - name: summarizeHistory
           id: function
-          uses: urcomputeringpal/github-script-ts@ffbd14d3da998a8c02d11cb421fe374104026b59 # v0.0.9
-          env:
-              TARGET_SECONDS: ${{ inputs.target-seconds }}
-          with:
-              retries: 3
-              # missing 404 to allow for our own workflow run to take a few seconds to show up
-              retry-exempt-status-codes: 400,401,403,422
-              path: ${{ steps.path.outputs.action_path }}
-              function: summarizeHistory
-              debug: true
-
-        - name: summarizeHistory
-          id: function
           uses: actions/github-script@v6
           # You can pass environment variables to your script and then
           # read them from process.env.
