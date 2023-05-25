@@ -1,6 +1,10 @@
 name: Summarize Workflow History
 description: Performance, success rate, etc
 inputs:
+    github-token:
+        description: The GitHub token used to create an authenticated client
+        default: ${{ github.token }}
+
     target-default-success-rate:
         description: "Target default branch success rate"
         required: false
@@ -134,8 +138,13 @@ runs:
               TARGET_PR_FAILURE_SECONDS: ${{ inputs.target-pr-failure-seconds }}
               TARGET_PR_FAILURE_PERCENTILE: ${{ inputs.target-pr-failure-percentile }}
           with:
-              github-token: ${{ secrets.GITHUB_TOKEN }}
-              result-encoding: string
+              github-token: ${{ inputs.github-token }}
+              retries: 3
+              # missing 404 to allow for our own workflow run to take a few seconds to show up
+              retry-exempt-status-codes: 400,401,403,422
+              path: ${{ steps.path.outputs.action_path }}
+              function: summarizeHistory
+              debug: true
               script: |
                   const { summarizeHistory } = await import("${{ steps.github-script-ts.outputs.module }}");
                   return await summarizeHistory({core,context});
