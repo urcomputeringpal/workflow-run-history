@@ -112,3 +112,30 @@ runs:
               path: ${{ steps.path.outputs.action_path }}
               function: summarizeHistory
               debug: true
+
+        - name: summarizeHistory
+          id: function
+          uses: actions/github-script@v6
+          # You can pass environment variables to your script and then
+          # read them from process.env.
+          # https://github.com/actions/github-script/#use-env-as-input
+          env:
+              TARGET_DEFAULT_SUCCESS_RATE: ${{ inputs.target-default-success-rate }}
+              TARGET_PR_SUCCESS_RATE: ${{ inputs.target-pr-success-rate }}
+              TARGET_TAG_SUCCESS_RATE: ${{ inputs.target-tag-success-rate }}
+              TARGET_SECONDS: ${{ inputs.target-seconds }}
+              TARGET_PERCENTILE: ${{ inputs.target-percentile }}
+              TARGET_DEFAULT_SECONDS: ${{ inputs.target-default-seconds }}
+              TARGET_DEFAULT_PERCENTILE: ${{ inputs.target-default-percentile }}
+              TARGET_TAG_SECONDS: ${{ inputs.target-tag-seconds }}
+              TARGET_TAG_PERCENTILE: ${{ inputs.target-tag-percentile }}
+              TARGET_PR_SECONDS: ${{ inputs.target-pr-seconds }}
+              TARGET_PR_PERCENTILE: ${{ inputs.target-pr-percentile }}
+              TARGET_PR_FAILURE_SECONDS: ${{ inputs.target-pr-failure-seconds }}
+              TARGET_PR_FAILURE_PERCENTILE: ${{ inputs.target-pr-failure-percentile }}
+          with:
+              github-token: ${{ secrets.GITHUB_TOKEN }}
+              result-encoding: string
+              script: |
+                  const { summarizeHistory } = await import("${{ steps.github-script-ts.outputs.module }}");
+                  return await summarizeHistory({core,context});
