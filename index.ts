@@ -1,7 +1,7 @@
 import { GitHubScriptArguments } from "@urcomputeringpal/github-script-ts";
 import { getWorkflowRuns } from "./src/workflowGroup";
 import { EnvInputName, EnvInputValue } from "./src/inputs";
-import { describePercentile } from "./src/ui";
+import { describePercentile, hitTargetEmoji } from "./src/ui";
 
 export async function summarizeHistory(args: GitHubScriptArguments): Promise<void> {
     const { github, context, core } = args;
@@ -56,28 +56,54 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
                 core.summary.addHeading("Success Rate", 2);
 
                 const successPR = success.ignoringRefsMatchingPrefixes([`refs/heads/${defaultBranch}`, "refs/tag"]);
-                const successDefault = success.byRef(defaultBranch);
                 const failurePR = failure.ignoringRefsMatchingPrefixes([`refs/heads/${defaultBranch}`, "refs/tag"]);
+                const successDefault = success.byRef(defaultBranch);
                 const failureDefault = failure.byRef(defaultBranch);
+                const successTags = success.tags();
+                const failureTags = failure.tags();
+
+                if (successPR.runs.length + failurePR.runs.length > 0) {
+                    const prRate = Math.ceil(
+                        (successPR.runs.length / (successPR.runs.length + failurePR.runs.length)) * 100
+                    );
+                    const targetPrRate = parseInt(process.env.TARGET_PR_SUCCESS_RATE ?? "90");
+                    const hitTarget = prRate < targetPrRate;
+                    core.setOutput("hit-target-pr-success-rate", hitTarget);
+                    core.summary.addHeading(
+                        `${prRate}% successful on PRs (${hitTargetEmoji(hitTarget)} target ${targetPrRate}%)`,
+                        3
+                    );
+                }
 
                 if (successDefault.runs.length + failureDefault.runs.length > 0) {
                     const defaultRate = Math.ceil(
                         (successDefault.runs.length / (successDefault.runs.length + failureDefault.runs.length)) * 100
                     );
                     const targetDefaultRate = parseInt(process.env.TARGET_DEFAULT_SUCCESS_RATE ?? "99");
-                    core.setOutput("hit-target-default-success-rate", defaultRate < targetDefaultRate);
-                    core.summary.addHeading(`${defaultRate}% successful on ${defaultBranch}`, 3);
-                }
-                if (successPR.runs.length + failurePR.runs.length > 0) {
-                    const prRate = Math.ceil(
-                        (successPR.runs.length / (successPR.runs.length + failurePR.runs.length)) * 100
+                    const hitTarget = defaultRate < targetDefaultRate;
+                    core.setOutput("hit-target-default-success-rate", hitTarget);
+                    core.summary.addHeading(
+                        ` ${defaultRate}% successful on ${defaultBranch} (${hitTargetEmoji(
+                            hitTarget
+                        )} target ${targetDefaultRate}%)}`,
+                        3
                     );
-                    const targetPrRate = parseInt(process.env.TARGET_PR_SUCCESS_RATE ?? "90");
-                    core.setOutput("hit-target-pr-success-rate", prRate < targetPrRate);
-                    core.summary.addHeading(`${prRate}% successful on PRs`, 3);
+                }
+                if (successTags.runs.length + failureTags.runs.length > 0) {
+                    const tagRate = Math.ceil(
+                        (successTags.runs.length / (successTags.runs.length + failureTags.runs.length)) * 100
+                    );
+                    const targetTagRate = parseInt(process.env.TARGET_TAG_SUCCESS_RATE ?? "99");
+                    const hitTarget = tagRate < targetTagRate;
+                    core.setOutput("hit-target-tag-success-rate", hitTarget);
+                    core.summary.addHeading(
+                        `${tagRate}% successful on tags (${hitTargetEmoji(hitTarget)} target ${targetTagRate}%)`,
+                        3
+                    );
                 }
             } else if (success !== undefined && success.runs.length > 0) {
                 core.setOutput("hit-target-default-success-rate", true);
+                core.setOutput("hit-target-tag-success-rate", true);
                 core.setOutput("hit-target-pr-success-rate", true);
 
                 core.summary.addHeading(`All ${success.runs.length} runs have completed successfully!`, 2);
@@ -88,6 +114,7 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
             } else if (failure !== undefined && failure.runs.length > 0) {
                 core.summary.addHeading(`All ${failure.runs.length} runs have failed.`, 2);
                 core.setOutput("hit-target-default-success-rate", false);
+                core.setOutput("hit-target-tag-success-rate", false);
                 core.setOutput("hit-target-pr-success-rate", false);
             }
 
@@ -160,18 +187,7 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
                                   ]
                                 : [],
                         ].flat()
-                    )
-                    .addTable([
-                        [
-                            { data: "Percentile", header: true },
-                            { data: "Seconds", header: true },
-                        ],
-                        ["99th", `${success.getNthPercentileDuration(99)}`],
-                        ["90th", `${success.getNthPercentileDuration(90)}`],
-                        ["50th", `${success.getNthPercentileDuration(50)}`],
-                        ["10th", `${success.getNthPercentileDuration(10)}`],
-                        ["1st", `${success.getNthPercentileDuration(1)}`],
-                    ]);
+                    );
             }
             if (failure !== undefined && failure.runs.length > 0) {
                 const failurePR = failure.ignoringRefsMatchingPrefixes([`refs/heads/${defaultBranch}`, "refs/tag"]);
@@ -181,7 +197,6 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
                     EnvInputValue.targetPrFailurePercentile,
                     core
                 );
-                const failureDefault = failure.byRef(defaultBranch);
                 core.summary
                     .addHeading(`Compared to ${failure.runs.length} failing runs`, 4)
                     .addList(
@@ -194,27 +209,36 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
                                       ),
                                   ]
                                 : [],
-                            failureDefault.runs.length > 0
-                                ? [
-                                      describePercentile(
-                                          failureDefault.getPercentileForDuration(thisRunSeconds),
-                                          `failing runs of this workflow on ${defaultBranch}`
-                                      ),
-                                  ]
-                                : [],
                         ].flat()
-                    )
-                    .addTable([
-                        [
-                            { data: "Percentile", header: true },
-                            { data: "Seconds", header: true },
-                        ],
-                        ["99th", `${failure.getNthPercentileDuration(99)}`],
-                        ["90th", `${failure.getNthPercentileDuration(90)}`],
-                        ["50th", `${failure.getNthPercentileDuration(50)}`],
-                        ["10th", `${failure.getNthPercentileDuration(10)}`],
-                        ["1st", `${failure.getNthPercentileDuration(1)}`],
-                    ]);
+                    );
+            }
+
+            core.summary.addHeading("Performance Breakdown", 2);
+            if (success !== undefined && success.runs.length > 0) {
+                core.summary.addHeading(`Successful runs`, 3).addTable([
+                    [
+                        { data: "Percentile", header: true },
+                        { data: "Seconds", header: true },
+                    ],
+                    ["99th", `${success.getNthPercentileDuration(99)}`],
+                    ["90th", `${success.getNthPercentileDuration(90)}`],
+                    ["50th", `${success.getNthPercentileDuration(50)}`],
+                    ["10th", `${success.getNthPercentileDuration(10)}`],
+                    ["1st", `${success.getNthPercentileDuration(1)}`],
+                ]);
+            }
+            if (failure !== undefined && failure.runs.length > 0) {
+                core.summary.addHeading(`Failing runs`, 3).addTable([
+                    [
+                        { data: "Percentile", header: true },
+                        { data: "Seconds", header: true },
+                    ],
+                    ["99th", `${failure.getNthPercentileDuration(99)}`],
+                    ["90th", `${failure.getNthPercentileDuration(90)}`],
+                    ["50th", `${failure.getNthPercentileDuration(50)}`],
+                    ["10th", `${failure.getNthPercentileDuration(10)}`],
+                    ["1st", `${failure.getNthPercentileDuration(1)}`],
+                ]);
             }
         } else {
             core.summary.addHeading(`🎉 First run!`);

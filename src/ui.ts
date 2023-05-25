@@ -21,3 +21,7 @@ export function describePercentile(percentile: number, suffix: string): string {
         return `🐌🐌🐌 Slower than ${100 - percentile}% of ${suffix}`;
     }
 }
+
+export function hitTargetEmoji(bool: boolean): string {
+    return bool ? "✅" : "❌";
+}
