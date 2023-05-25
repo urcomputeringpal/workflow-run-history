@@ -1,4 +1,4 @@
-function describePercentile(percentile: number, suffix: string): string {
+export function describePercentile(percentile: number, suffix: string): string {
     if (percentile == 100) {
         return `💎💎💎 Faster than all ${suffix}`;
     } else if (percentile == 50) {

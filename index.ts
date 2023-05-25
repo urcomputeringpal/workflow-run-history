@@ -1,7 +1,7 @@
 import { GitHubScriptArguments } from "@urcomputeringpal/github-script-ts";
 import { getWorkflowRuns } from "./src/workflowGroup";
 import { EnvInputName, EnvInputValue } from "./src/inputs";
-import { describePercentile } from "./scr/ui";
+import { describePercentile } from "./src/ui";
 
 export async function summarizeHistory(args: GitHubScriptArguments): Promise<void> {
     const { github, context, core } = args;
