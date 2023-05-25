@@ -44,20 +44,16 @@ inputs:
     target-pr-seconds:
         description: "Target latency for PR runtime. Defaults to `target-seconds`."
         required: false
-        default: "60"
     target-pr-percentile:
         description: "Target percentile for PR runtime. Defaults to `target-percentile`."
         required: false
-        default: "50"
 
     target-pr-failure-seconds:
         description: "Target latency for PR failure runtime. Defaults to `target-pr-seconds`."
         required: false
-        default: "60"
     target-pr-failure-percentile:
         description: "Target percentile for PR failure runtime. Defaults to `target-pr-percentile`."
         required: false
-        default: "50"
 
 outputs:
     hit-target-default-success-rate:
@@ -129,9 +125,7 @@ runs:
               retries: 3
               # missing 404 to allow for our own workflow run to take a few seconds to show up
               retry-exempt-status-codes: 400,401,403,422
-              path: ${{ steps.path.outputs.action_path }}
-              function: summarizeHistory
               debug: true
               script: |
                   const { summarizeHistory } = await import("${{ steps.github-script-ts.outputs.module }}");
-                  return await summarizeHistory({core,context});
+                  return await summarizeHistory({github, core,context});

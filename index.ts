@@ -6,7 +6,7 @@ import { describePercentile } from "./src/ui";
 export async function summarizeHistory(args: GitHubScriptArguments): Promise<void> {
     const { github, context, core } = args;
     if (github === undefined || context == undefined || core === undefined) {
-        throw new Error("");
+        throw new Error("need github, context, and core");
     }
 
     const defaultBranch = context.payload.repository?.default_branch ?? "main";
