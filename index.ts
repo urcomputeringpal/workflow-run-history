@@ -213,33 +213,34 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
                     );
             }
 
-            core.summary.addHeading("Performance Breakdown", 2);
-            if (success !== undefined && success.runs.length > 0) {
-                core.summary.addHeading(`Successful runs`, 3).addTable([
-                    [
-                        { data: "Percentile", header: true },
-                        { data: "Seconds", header: true },
-                    ],
-                    ["99th", `${success.getNthPercentileDuration(99)}`],
-                    ["90th", `${success.getNthPercentileDuration(90)}`],
-                    ["50th", `${success.getNthPercentileDuration(50)}`],
-                    ["10th", `${success.getNthPercentileDuration(10)}`],
-                    ["1st", `${success.getNthPercentileDuration(1)}`],
-                ]);
-            }
-            if (failure !== undefined && failure.runs.length > 0) {
-                core.summary.addHeading(`Failing runs`, 3).addTable([
-                    [
-                        { data: "Percentile", header: true },
-                        { data: "Seconds", header: true },
-                    ],
-                    ["99th", `${failure.getNthPercentileDuration(99)}`],
-                    ["90th", `${failure.getNthPercentileDuration(90)}`],
-                    ["50th", `${failure.getNthPercentileDuration(50)}`],
-                    ["10th", `${failure.getNthPercentileDuration(10)}`],
-                    ["1st", `${failure.getNthPercentileDuration(1)}`],
-                ]);
-            }
+            // TODO bring back once event filtering lands
+            // core.summary.addHeading("Performance Breakdown", 2);
+            // if (success !== undefined && success.runs.length > 0) {
+            //     core.summary.addHeading(`Successful runs`, 3).addTable([
+            //         [
+            //             { data: "Percentile", header: true },
+            //             { data: "Seconds", header: true },
+            //         ],
+            //         ["99th", `${success.getNthPercentileDuration(99)}`],
+            //         ["90th", `${success.getNthPercentileDuration(90)}`],
+            //         ["50th", `${success.getNthPercentileDuration(50)}`],
+            //         ["10th", `${success.getNthPercentileDuration(10)}`],
+            //         ["1st", `${success.getNthPercentileDuration(1)}`],
+            //     ]);
+            // }
+            // if (failure !== undefined && failure.runs.length > 0) {
+            //     core.summary.addHeading(`Failing runs`, 3).addTable([
+            //         [
+            //             { data: "Percentile", header: true },
+            //             { data: "Seconds", header: true },
+            //         ],
+            //         ["99th", `${failure.getNthPercentileDuration(99)}`],
+            //         ["90th", `${failure.getNthPercentileDuration(90)}`],
+            //         ["50th", `${failure.getNthPercentileDuration(50)}`],
+            //         ["10th", `${failure.getNthPercentileDuration(10)}`],
+            //         ["1st", `${failure.getNthPercentileDuration(1)}`],
+            //     ]);
+            // }
         } else {
             core.summary.addHeading(`🎉 First run!`);
         }
