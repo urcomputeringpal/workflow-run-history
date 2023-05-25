@@ -4,17 +4,19 @@ on:
     push:
         branches:
             - main
+        tags:
+            - v*
     schedule:
         - cron: "0 * * * *"
 
 jobs:
-    prepare:
+    test:
         runs-on: ubuntu-latest
         steps:
             - run: sleep 5
     workflow-run-history:
-        name: workflow run history
-        needs: prepare
+        name: Workflow
+        needs: test
         runs-on: ubuntu-latest
         steps:
             - name: Checkout
@@ -22,8 +24,6 @@ jobs:
             - uses: ./
               id: summarizeHistory
               timeout-minutes: 2
-    test:
-        needs: workflow-run-history
-        runs-on: ubuntu-latest
-        steps:
-            - run: echo true
+            - run: echo "$HISTORY_OUTPUTS"
+              env:
+                  HISTORY_OUTPUTS: ${{ toJSON(steps.summarizeHistory.outputs) }}

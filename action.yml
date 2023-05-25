@@ -1,5 +1,87 @@
 name: Summarize Workflow History
 description: Performance, success rate, etc
+inputs:
+    github-token:
+        description: The GitHub token used to create an authenticated client
+        default: ${{ github.token }}
+
+    target-default-success-rate:
+        description: "Target default branch success rate"
+        required: false
+        default: "99"
+    target-pr-success-rate:
+        description: "Target PR success rate"
+        required: false
+        default: "90"
+    target-tag-success-rate:
+        description: "Target tag success rate"
+        required: false
+        default: "99"
+
+    target-seconds:
+        description: "Target runtime seconds. Defaults to 60."
+        required: false
+        default: "60"
+    target-percentile:
+        description: "Target percentile. Higher percentiles are faster. Defaults to 50 (average)."
+        required: false
+        default: "50"
+
+    target-default-seconds:
+        description: "Target latency for default branch in seconds. Defaults to `target-seconds`."
+        required: false
+    target-default-percentile:
+        description: "Target percentile for default branch runtime. Defaults to `target-percentile`."
+        required: false
+
+    target-tag-seconds:
+        description: "Target latency for tag runtime. Defaults to `target-default-seconds`."
+        required: false
+    target-tag-percentile:
+        description: "Target percentile for tag runtime. Defaults to `target-default-percentile`."
+        required: false
+
+    target-pr-seconds:
+        description: "Target latency for PR runtime. Defaults to `target-seconds`."
+        required: false
+    target-pr-percentile:
+        description: "Target percentile for PR runtime. Defaults to `target-percentile`."
+        required: false
+
+    target-pr-failure-seconds:
+        description: "Target latency for PR failure runtime. Defaults to `target-pr-seconds`."
+        required: false
+    target-pr-failure-percentile:
+        description: "Target percentile for PR failure runtime. Defaults to `target-pr-percentile`."
+        required: false
+
+outputs:
+    hit-target-default-success-rate:
+        description: "Hit target default success rate"
+        value: ${{ steps.function.outputs.hit-target-default-success-rate }}
+    hit-target-tag-success-rate:
+        description: "Hit target tag success rate"
+        value: ${{ steps.function.outputs.hit-target-tag-success-rate }}
+    hit-target-pr-success-rate:
+        description: "Hit target PR success rate"
+        value: ${{ steps.function.outputs.hit-target-pr-success-rate }}
+
+    hit-target-seconds:
+        description: "Hit target seconds"
+        value: ${{ steps.function.outputs.hit-target-seconds }}
+
+    hit-target-default-success-percentile:
+        description: "Hit target default success percentile"
+        value: ${{ steps.function.outputs.hit-target-default-success-percentile }}
+    hit-target-tag-success-percentile:
+        description: "Hit target tag success rate"
+        value: ${{ steps.function.outputs.hit-target-tag-success-percentile }}
+    hit-target-pr-success-percentile:
+        description: "Hit target PR success percentile"
+        value: ${{ steps.function.outputs.hit-target-pr-success-percentile }}
+    hit-target-failure-pr-percentile:
+        description: "Hit target failure PR percentile"
+        value: ${{ steps.function.outputs.hit-target-failure-pr-percentile }}
 
 runs:
     using: "composite"
@@ -16,10 +98,34 @@ runs:
 
           with:
               path: ${{ steps.path.outputs.action_path }}
+              build: npm run test && npm run build
 
         - name: summarizeHistory
           id: function
-          uses: urcomputeringpal/github-script-ts@ffbd14d3da998a8c02d11cb421fe374104026b59 # v0.0.9
+          uses: actions/github-script@v6
+          # You can pass environment variables to your script and then
+          # read them from process.env.
+          # https://github.com/actions/github-script/#use-env-as-input
+          env:
+              TARGET_DEFAULT_SUCCESS_RATE: ${{ inputs.target-default-success-rate }}
+              TARGET_PR_SUCCESS_RATE: ${{ inputs.target-pr-success-rate }}
+              TARGET_TAG_SUCCESS_RATE: ${{ inputs.target-tag-success-rate }}
+              TARGET_SECONDS: ${{ inputs.target-seconds }}
+              TARGET_PERCENTILE: ${{ inputs.target-percentile }}
+              TARGET_DEFAULT_SECONDS: ${{ inputs.target-default-seconds }}
+              TARGET_DEFAULT_PERCENTILE: ${{ inputs.target-default-percentile }}
+              TARGET_TAG_SECONDS: ${{ inputs.target-tag-seconds }}
+              TARGET_TAG_PERCENTILE: ${{ inputs.target-tag-percentile }}
+              TARGET_PR_SECONDS: ${{ inputs.target-pr-seconds }}
+              TARGET_PR_PERCENTILE: ${{ inputs.target-pr-percentile }}
+              TARGET_PR_FAILURE_SECONDS: ${{ inputs.target-pr-failure-seconds }}
+              TARGET_PR_FAILURE_PERCENTILE: ${{ inputs.target-pr-failure-percentile }}
           with:
-              path: ${{ steps.path.outputs.action_path }}
-              function: summarizeHistory
+              github-token: ${{ inputs.github-token }}
+              retries: 3
+              # missing 404 to allow for our own workflow run to take a few seconds to show up
+              retry-exempt-status-codes: 400,401,403,422
+              debug: true
+              script: |
+                  const { summarizeHistory } = await import("${{ steps.github-script-ts.outputs.module }}");
+                  return await summarizeHistory({github, core,context});
