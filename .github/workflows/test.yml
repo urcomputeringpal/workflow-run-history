@@ -14,16 +14,37 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - run: sleep 5
-    workflow-run-history:
-        name: Workflow
+
+    push:
+        name: Push
         needs: test
         runs-on: ubuntu-latest
+        if: github.event_name == 'push'
         steps:
             - name: Checkout
               uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
             - uses: ./
               id: summarizeHistory
               timeout-minutes: 2
+              with:
+                filter-event: push
+            - run: echo "$HISTORY_OUTPUTS"
+              env:
+                  HISTORY_OUTPUTS: ${{ toJSON(steps.summarizeHistory.outputs) }}
+
+    pull_request:
+        name: Pull Request
+        needs: test
+        runs-on: ubuntu-latest
+        if: github.event_name == 'pull_request'
+        steps:
+            - name: Checkout
+              uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+            - uses: ./
+              id: summarizeHistory
+              timeout-minutes: 2
+              with:
+                filter-event: pull_request
             - run: echo "$HISTORY_OUTPUTS"
               env:
                   HISTORY_OUTPUTS: ${{ toJSON(steps.summarizeHistory.outputs) }}

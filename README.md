@@ -45,6 +45,10 @@ jobs:
                   target-default-success-rate: "99"
                   # This workflow should complete 90% of the time on PRs.
                   target-pr-success-rate: "90"
+
+                  # filter-actor: "urcomputeringpal"
+                  # filter-branch: "main"
+                  # filter-event: "push"
             - run: |
                   echo "This workflow run hit its target performance: ${{ steps.history.outputs.hit-target-seconds }}"
                   echo "This workflow has historically hit its target performance on PRs: ${{ steps.history.outputs.hit-target-pr-success-percentile }}"

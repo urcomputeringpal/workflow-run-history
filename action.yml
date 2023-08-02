@@ -55,6 +55,16 @@ inputs:
         description: "Target percentile for PR failure runtime. Defaults to `target-pr-percentile`."
         required: false
 
+    filter-actor:
+        description: "Filter by actor"
+        required: false
+    filter-branch:
+        description: "Filter by branch"
+        required: false
+    filter-event:
+        description: "Filter by event"
+        required: false
+
 outputs:
     hit-target-default-success-rate:
         description: "Hit target default success rate"
@@ -120,6 +130,9 @@ runs:
               TARGET_PR_PERCENTILE: ${{ inputs.target-pr-percentile }}
               TARGET_PR_FAILURE_SECONDS: ${{ inputs.target-pr-failure-seconds }}
               TARGET_PR_FAILURE_PERCENTILE: ${{ inputs.target-pr-failure-percentile }}
+              FILTER_ACTOR: ${{ inputs.filter-actor }}
+              FILTER_BRANCH: ${{ inputs.filter-branch }}
+              FILTER_EVENT: ${{ inputs.filter-event }}
           with:
               github-token: ${{ inputs.github-token }}
               retries: 3

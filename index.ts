@@ -17,13 +17,11 @@ export async function summarizeHistory(args: GitHubScriptArguments): Promise<voi
     });
     const workflow_id = run.data.workflow_id;
 
-    // TODO link to the workflow history
-    // const workflowResponse = await github.rest.actions.getWorkflow({
-    //     ...context.repo,
-    //     workflow_id,
-    // });
+    const actor = process.env.FILTER_ACTOR == "" ? undefined : process.env.FILTER_ACTOR;
+    const branch = process.env.FILTER_BRANCH == "" ? undefined : process.env.FILTER_BRANCH;
+    const event = process.env.FILTER_EVENT == "" ? undefined : process.env.FILTER_EVENT;
 
-    getWorkflowRuns(workflow_id, { github, context, core }).then(groupedWorkflowRuns => {
+    getWorkflowRuns(workflow_id, actor, branch, event, { github, context, core }).then(groupedWorkflowRuns => {
         const totalRuns = Array.from(groupedWorkflowRuns.values()).reduce(
             (total, group) => total + group.runs.length,
             0
