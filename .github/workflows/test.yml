@@ -24,6 +24,9 @@ jobs:
             - uses: ./
               id: summarizeHistory
               timeout-minutes: 2
+              with:
+                  target-seconds: "900"
+                  target-percentile: "99"
             - run: echo "$HISTORY_OUTPUTS"
               env:
                   HISTORY_OUTPUTS: ${{ toJSON(steps.summarizeHistory.outputs) }}
