@@ -64,7 +64,13 @@ export type GroupedWorkflowRuns = Map<string, WorkflowGroup>;
 type ListWorkflowRunsResponse =
     Endpoints["GET /repos/{owner}/{repo}/actions/workflows/{workflow_id}/runs"]["response"]["data"]["workflow_runs"];
 
-export async function getWorkflowRuns(workflow_id: number, args: GitHubScriptArguments): Promise<GroupedWorkflowRuns> {
+export async function getWorkflowRuns(
+    workflow_id: number,
+    actor: string | undefined = undefined,
+    branch: string | undefined = undefined,
+    event: string | undefined = undefined,
+    args: GitHubScriptArguments
+): Promise<GroupedWorkflowRuns> {
     const workflowRuns: WorkflowRun[] = [];
     const { github, context, core } = args;
     if (github === undefined || context == undefined || core === undefined) {
@@ -85,6 +91,9 @@ export async function getWorkflowRuns(workflow_id: number, args: GitHubScriptArg
         ...context.repo,
         workflow_id,
         created,
+        actor,
+        branch,
+        event,
     })) {
         const workflowRunResponse: ListWorkflowRunsResponse =
             response.data.length === undefined ? (response.data as any).workflow_runs : response.data;

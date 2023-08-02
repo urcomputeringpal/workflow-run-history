@@ -260,7 +260,7 @@ describe("getWorkflowRuns", () => {
             core,
         };
 
-        const groupedRuns = await getWorkflowRuns(1234, mockArgs);
+        const groupedRuns = await getWorkflowRuns(1234, undefined, undefined, undefined, mockArgs);
 
         expect(mockGithub.paginate.iterator).toHaveBeenCalledWith(mockGithub.rest.actions.listWorkflowRuns, {
             owner: "status",
@@ -315,12 +315,15 @@ describe("getWorkflowRuns", () => {
             core,
         };
 
-        const groupedRuns = await getWorkflowRuns(1234, mockArgs);
+        const groupedRuns = await getWorkflowRuns(1234, "actor", "branch", "event", mockArgs);
 
         expect(mockGithub.paginate.iterator).toHaveBeenCalledWith(mockGithub.rest.actions.listWorkflowRuns, {
             owner: "status",
             repo: "status",
             workflow_id: 1234,
+            actor: "actor",
+            branch: "branch",
+            event: "event",
             created: expect.any(String),
         });
 
