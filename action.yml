@@ -112,7 +112,7 @@ runs:
 
         - name: summarizeHistory
           id: function
-          uses: actions/github-script@v6
+          uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6
           # You can pass environment variables to your script and then
           # read them from process.env.
           # https://github.com/actions/github-script/#use-env-as-input
