@@ -104,7 +104,7 @@ runs:
 
         - name: Setup TypeScript scripts
           id: github-script-ts
-          uses: urcomputeringpal/github-script-ts@ffbd14d3da998a8c02d11cb421fe374104026b59 # v0.0.9
+          uses: urcomputeringpal/github-script-ts@5616cb41668b513016d240c601acd567809b37c8 # v0.0.10
 
           with:
               path: ${{ steps.path.outputs.action_path }}
